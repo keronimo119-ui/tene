@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Tene（手値）</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@700;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f5ede0; --surface: #ffffff; --border: #c8a97a;
+      --text-primary: #1a1008; --text-secondary: #5a3e1e;
+      --accent: #b36200; --accent-light: #ffe4b8; --accent-dark: #7a4000;
+      --green: #1a5c3a; --red: #b30000; --star-off: #d4b890; --star-on: #cc7000;
+    }
+    [data-theme="dark"] {
+      --bg: #000000; --surface: #111111; --border: #7a5530;
+      --text-primary: #ffffff; --text-secondary: #ffcc88;
+      --accent: #ffaa44; --accent-light: #2a1800; --accent-dark: #ffcc88;
+      --green: #44cc88; --red: #ff6666; --star-off: #333333; --star-on: #ffaa00;
+    }
+    body { font-family:'Noto Sans JP',sans-serif; background:var(--bg); color:var(--text-primary); font-size:17px; font-weight:700; min-height:100vh; padding:0 0 5rem; transition:background 0.2s,color 0.2s; }
+
+    #ad-banner { width:100%; height:50px; overflow:hidden; background:transparent; position:relative; }
+    #ad-banner .ad-label { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:2rem; font-weight:900; color:rgba(0,0,0,0.1); letter-spacing:0.5em; pointer-events:none; }
+
+    header { background:var(--accent); padding:0.6rem 0.9rem; display:flex; align-items:center; justify-content:space-between; position:sticky; top:50px; z-index:100; }
+    .header-left { display:flex; align-items:center; gap:0.6rem; min-width:0; flex:1; }
+    .back-btn { background:rgba(0,0,0,0.25); border:2px solid rgba(255,255,255,0.5); border-radius:8px; padding:0.25rem 0.6rem; font-family:inherit; font-size:0.85rem; font-weight:900; color:#fff; cursor:pointer; display:none; white-space:nowrap; flex-shrink:0; }
+    .back-btn.visible { display:block; }
+    .logo { font-size:1.2rem; font-weight:900; color:#fff; cursor:pointer; flex-shrink:0; }
+    .page-title { font-size:0.8rem; font-weight:700; color:#ffe4b8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; min-width:0; }
+    .theme-btn { background:rgba(0,0,0,0.25); border:2px solid rgba(255,255,255,0.5); border-radius:50%; width:2.2rem; height:2.2rem; font-size:1.1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+
+    .bottom-nav { position:fixed; bottom:0; left:0; right:0; background:var(--surface); border-top:2px solid var(--border); display:flex; z-index:100; }
+    .nav-btn { flex:1; padding:0.6rem 0.3rem 0.5rem; background:transparent; border:none; font-family:inherit; font-size:0.7rem; font-weight:900; color:var(--text-secondary); cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:0.15rem; }
+    .nav-btn .nav-icon { font-size:1.3rem; line-height:1; }
+    .nav-btn.active { color:var(--accent); }
+
+    .page { display:none; }
+    .page.active { display:block; }
+    .container { max-width:480px; margin:0 auto; padding:1.1rem 1rem; display:flex; flex-direction:column; gap:0.9rem; }
+
+    .card { background:var(--surface); border:2px solid var(--border); border-radius:14px; padding:1.2rem; }
+    .card-title { font-size:0.8rem; font-weight:900; letter-spacing:0.14em; color:var(--accent); text-transform:uppercase; margin-bottom:1rem; border-bottom:2px solid var(--accent-light); padding-bottom:0.4rem; }
+
+    .tab-bar { display:flex; background:var(--bg); border:2px solid var(--border); border-radius:10px; overflow:hidden; margin-bottom:1rem; }
+    .tab-btn { flex:1; padding:0.7rem 0.5rem; background:transparent; border:none; font-family:inherit; font-size:0.9rem; font-weight:900; color:var(--text-secondary); cursor:pointer; }
+    .tab-btn.active { background:var(--accent); color:#000; }
+
+    .input-group { margin-bottom:0.9rem; }
+    .input-group:last-child { margin-bottom:0; }
+    .input-label { font-size:0.95rem; font-weight:900; color:var(--text-secondary); margin-bottom:0.4rem; display:block; }
+    .input-wrap { position:relative; }
+    .input-wrap .prefix { position:absolute; left:13px; top:50%; transform:translateY(-50%); color:var(--text-secondary); font-size:1rem; font-weight:900; }
+    input[type="number"],input[type="text"],input[type="date"],select,textarea { width:100%; padding:0.75rem; border:2px solid var(--border); border-radius:10px; font-family:inherit; font-size:1rem; font-weight:700; color:var(--text-primary); background:var(--bg); outline:none; transition:border-color 0.2s,background 0.2s; -moz-appearance:textfield; }
+    input[type="number"] { padding-left:2.2rem; }
+    input[type="number"]::-webkit-outer-spin-button,input[type="number"]::-webkit-inner-spin-button { -webkit-appearance:none; }
+    input:focus,select:focus,textarea:focus { border-color:var(--accent); background:var(--surface); }
+    select { cursor:pointer; }
+    textarea { resize:vertical; min-height:80px; }
+    .input-row { display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; }
+
+    .btn { padding:0.8rem 1rem; border-radius:10px; border:none; font-family:inherit; font-size:0.95rem; font-weight:900; cursor:pointer; transition:opacity 0.15s; }
+    .btn:hover { opacity:0.85; }
+    .btn-primary { background:var(--accent); color:#000; width:100%; }
+    .btn-secondary { background:var(--accent-light); color:var(--accent-dark); border:2px solid var(--border); }
+    .btn-danger { background:var(--red); color:#fff; }
+    .btn-row { display:flex; gap:0.75rem; }
+    .btn-row .btn { flex:1; }
+    .btn-sm { padding:0.45rem 0.7rem; font-size:0.82rem; }
+
+    .platform-group { display:flex; flex-direction:column; gap:0.5rem; }
+    .platform-btn { padding:0.8rem 1rem; border:2px solid var(--border); border-radius:10px; background:var(--bg); font-family:inherit; font-size:1rem; font-weight:900; color:var(--text-secondary); cursor:pointer; text-align:left; display:flex; justify-content:space-between; align-items:center; transition:all 0.15s; }
+    .platform-btn.active { border-color:var(--accent); background:var(--accent); color:#000; }
+    .platform-fee { font-size:0.85rem; font-weight:700; }
+    .fee-edit { display:flex; align-items:center; gap:0.4rem; font-size:0.85rem; font-weight:700; }
+
+    .star-section { margin-bottom:1rem; }
+    .star-label { font-size:0.9rem; font-weight:900; color:var(--text-secondary); margin-bottom:0.4rem; display:block; line-height:1.5; }
+    .star-label strong { color:var(--text-primary); font-weight:900; }
+    .stars { display:flex; gap:6px; }
+    .star { font-size:2rem; cursor:pointer; color:var(--star-off); transition:color 0.15s,transform 0.1s; user-select:none; line-height:1; }
+    .star:hover { transform:scale(1.15); }
+    .star.active { color:var(--star-on); }
+
+    .coeff-wrap { margin-top:1rem; padding-top:1rem; border-top:2px solid var(--border); }
+    .coeff-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem; }
+    .coeff-label { font-size:0.95rem; font-weight:900; color:var(--text-secondary); }
+    .coeff-value { font-size:1.2rem; font-weight:900; color:var(--accent); }
+    .coeff-bar-bg { height:8px; background:var(--accent-light); border-radius:99px; overflow:hidden; }
+    .coeff-bar { height:100%; background:var(--accent); border-radius:99px; transition:width 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+
+    .result-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:0.75rem; }
+    .result-item { background:var(--bg); border:2px solid var(--border); border-radius:10px; padding:0.9rem 1rem; }
+    .result-item.main { grid-column:1/-1; background:#000; border-color:#000; }
+    .result-label { font-size:0.8rem; font-weight:900; color:var(--text-secondary); margin-bottom:0.3rem; }
+    .result-item.main .result-label { color:#ffcc88; }
+    .result-value { font-size:clamp(1.1rem,5vw,1.8rem); font-weight:900; color:var(--text-primary); }
+    .result-item.main .result-value { font-size:clamp(1.6rem,7vw,2.4rem); color:#ffff00; }
+    .result-item.profit .result-value { color:var(--green); }
+    .fee-note { font-size:0.85rem; font-weight:700; color:var(--text-secondary); text-align:center; margin-top:0.5rem; }
+
+    .search-bar { display:flex; gap:0.5rem; }
+    .search-bar input { flex:1; padding:0.7rem 1rem; border:2px solid var(--border); border-radius:10px; font-family:inherit; font-size:0.95rem; font-weight:700; background:var(--surface); color:var(--text-primary); outline:none; }
+    .filter-row { display:flex; gap:0.5rem; flex-wrap:wrap; }
+    .filter-row select { flex:1; min-width:110px; padding:0.55rem 0.7rem; font-size:0.85rem; }
+    .add-btn { background:var(--accent); color:#000; border:none; border-radius:10px; padding:0.75rem 1rem; font-family:inherit; font-size:1rem; font-weight:900; cursor:pointer; width:100%; }
+    .item-card { background:var(--surface); border:2px solid var(--border); border-radius:14px; padding:1rem; margin-bottom:0.7rem; cursor:pointer; transition:border-color 0.15s; }
+    .item-card:hover { border-color:var(--accent); }
+    .item-card.current-item { border-color:var(--accent); border-width:3px; }
+    .item-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.4rem; }
+    .item-name { font-size:1.05rem; font-weight:900; color:var(--text-primary); }
+    .item-series { font-size:0.8rem; font-weight:700; color:var(--text-secondary); margin-top:0.2rem; }
+    .item-meta { display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.4rem; }
+    .item-badge { background:var(--accent-light); color:var(--accent-dark); border-radius:6px; padding:0.2rem 0.5rem; font-size:0.8rem; font-weight:900; }
+    .item-badge.stock-zero { background:#ffe0e0; color:var(--red); }
+    .item-badge.platform { background:var(--bg); border:1px solid var(--border); color:var(--text-secondary); }
+    .empty-state { text-align:center; padding:2.5rem 1rem; color:var(--text-secondary); font-size:0.95rem; }
+
+    .form-section { margin-bottom:1.4rem; }
+    .form-section-title { font-size:0.78rem; font-weight:900; letter-spacing:0.14em; color:var(--accent); text-transform:uppercase; margin-bottom:0.7rem; padding-bottom:0.35rem; border-bottom:2px solid var(--accent-light); }
+    .checkbox-group { display:flex; flex-wrap:wrap; gap:0.5rem; }
+    .check-btn { padding:0.5rem 0.9rem; border:2px solid var(--border); border-radius:8px; background:var(--bg); font-family:inherit; font-size:0.9rem; font-weight:900; color:var(--text-secondary); cursor:pointer; transition:all 0.15s; }
+    .check-btn.active { background:var(--accent); border-color:var(--accent); color:#000; }
+
+    .confirm-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:200; align-items:center; justify-content:center; padding:1rem; }
+    .confirm-overlay.visible { display:flex; }
+    .confirm-box { background:var(--surface); border:2px solid var(--border); border-radius:14px; padding:1.5rem; max-width:320px; width:100%; text-align:center; }
+    .confirm-box p { font-size:1rem; font-weight:700; margin-bottom:1.2rem; line-height:1.6; white-space:pre-line; }
+
+    .photo-preview { display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:0.5rem; }
+    .photo-thumb { position:relative; }
+    .photo-thumb img { width:72px; height:72px; object-fit:cover; border-radius:8px; border:2px solid var(--border); display:block; }
+    .photo-thumb .del-btn { position:absolute; top:-6px; right:-6px; background:var(--red); color:#fff; border:none; border-radius:50%; width:20px; height:20px; font-size:0.7rem; cursor:pointer; font-weight:900; display:flex; align-items:center; justify-content:center; }
+    .file-input { padding:0.6rem; font-size:0.95rem; font-weight:700; background:var(--surface); border:2px solid var(--border); border-radius:10px; width:100%; color:var(--text-primary); }
+
+    .detail-link-btn { display:flex; align-items:center; gap:0.5rem; padding:0.8rem 1rem; background:var(--accent-light); border:2px solid var(--border); border-radius:10px; font-family:inherit; font-size:0.95rem; font-weight:900; color:var(--accent-dark); cursor:pointer; width:100%; margin-bottom:0.5rem; }
+    .log-mini-card { background:var(--bg); border:2px solid var(--border); border-radius:10px; padding:0.75rem 1rem; margin-bottom:0.5rem; cursor:pointer; }
+    .log-mini-card:hover { border-color:var(--accent); }
+
+
+    /* カレンダー */
+    .cal-day-header { font-size:0.72rem; font-weight:900; text-align:center; color:var(--text-secondary); padding:0.2rem 0; }
+    .cal-day { min-height:44px; border-radius:8px; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding:0.2rem 0.1rem; cursor:pointer; position:relative; background:var(--bg); border:1.5px solid transparent; transition:border-color 0.15s; font-size:0.82rem; font-weight:900; color:var(--text-primary); }
+    .cal-day:hover { border-color:var(--accent); }
+    .cal-day.today { border-color:var(--accent); background:var(--accent-light); }
+    .cal-day.has-data { background:var(--accent-light); }
+    .cal-day.selected { border-color:var(--accent); border-width:2.5px; }
+    .cal-day.empty { background:transparent; cursor:default; border-color:transparent; }
+    .cal-day .day-num { font-size:0.82rem; font-weight:900; }
+    .cal-day .day-marks { display:flex; gap:1px; flex-wrap:wrap; justify-content:center; margin-top:1px; }
+    .cal-day .mark { font-size:0.65rem; line-height:1; }
+    /* SNSエディタ */
+    #sns-editor-wrap { position:relative; width:100%; background:#333; border-radius:10px; overflow:hidden; touch-action:none; }
+    #sns-editor-canvas { display:block; width:100%; height:auto; cursor:grab; }
+    #sns-editor-canvas:active { cursor:grabbing; }
+    .current-item-badge { display:inline-block; background:#fff3; border:1px solid rgba(255,255,255,0.5); border-radius:6px; padding:0.2rem 0.6rem; font-size:0.78rem; font-weight:900; color:#fff; margin-left:0.4rem; }
+
+    .layer-card { background:var(--bg); border:2px solid var(--border); border-radius:10px; padding:0.6rem 0.8rem; margin-bottom:0.5rem; }
+    .layer-card.active-layer { border-color:var(--accent); }
+    .layer-thumb { width:40px; height:40px; object-fit:cover; border-radius:6px; border:1px solid var(--border); flex-shrink:0; }
+    .layer-controls { display:flex; flex-direction:column; gap:0.3rem; flex:1; }
+    .layer-slider-row { display:flex; align-items:center; gap:0.4rem; font-size:0.78rem; font-weight:700; color:var(--text-secondary); }
+    .layer-slider-row input[type="range"] { flex:1; accent-color:var(--accent); }
+    .layer-btn-row { display:flex; gap:0.3rem; margin-top:0.2rem; flex-wrap:wrap; }
+    .layer-btn { padding:0.3rem 0.6rem; border-radius:6px; border:none; font-family:inherit; font-size:0.78rem; font-weight:900; cursor:pointer; background:var(--accent-light); color:var(--accent-dark); }
+    .layer-btn.danger { background:#ffe0e0; color:var(--red); }
+
+    /* 枠スケール説明 */
+    .scale-hint { font-size:0.8rem; font-weight:700; color:var(--text-secondary); margin-top:0.4rem; line-height:1.5; }
+  </style>
+</head>
+<body>
+
+  <div id="ad-banner"><div class="ad-label">広　告</div></div>
+
+  <header>
+    <div class="header-left">
+      <button class="back-btn" id="back-btn" onclick="goBack()">← 戻る</button>
+      <span class="logo" onclick="goHome()">Tene</span>
+      <span class="page-title" id="page-title">手値</span>
+    </div>
+    <button class="theme-btn" onclick="toggleTheme()">🎨</button>
+  </header>
+
+  <!-- ホーム -->
+  <div class="page active" id="page-home">
+    <div class="container">
+      <div class="card" style="text-align:center;padding:1.5rem 1.2rem;">
+        <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:1.2rem;">作ることに集中できる、作家のための相棒アプリ</p>
+        <div style="display:flex;flex-direction:column;gap:0.7rem;">
+          <button class="btn btn-primary" onclick="showPage('page-price')">💴 価格計算</button>
+          <button class="btn btn-primary" onclick="showPage('page-items')">📦 作品管理（ハブ）</button>
+        </div>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.9rem;">
+          <button onclick="calPrev()" style="background:var(--accent-light);border:2px solid var(--border);border-radius:8px;padding:0.35rem 0.8rem;font-size:1rem;font-weight:900;cursor:pointer;color:var(--accent-dark);">‹</button>
+          <span id="cal-title" style="font-size:1rem;font-weight:900;color:var(--text-primary);"></span>
+          <button onclick="calNext()" style="background:var(--accent-light);border:2px solid var(--border);border-radius:8px;padding:0.35rem 0.8rem;font-size:1rem;font-weight:900;cursor:pointer;color:var(--accent-dark);">›</button>
+        </div>
+        <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;"></div>
+        <div style="display:flex;gap:0.75rem;margin-top:0.75rem;font-size:0.75rem;font-weight:700;color:var(--text-secondary);">
+          <span>📦 作品登録</span><span>📝 制作ログ</span>
+        </div>
+      </div>
+      <div class="card" id="cal-detail" style="display:none;">
+        <p class="card-title" id="cal-detail-title">選択した日</p>
+        <div id="cal-detail-content"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 価格計算 -->
+  <div class="page" id="page-price">
+    <div class="container">
+      <div class="card">
+        <p class="card-title">コスト</p>
+        <div class="input-row">
+          <div class="input-group"><label class="input-label">材料費</label><div class="input-wrap"><span class="prefix">¥</span><input type="number" id="material" value="500" min="0" oninput="calc()" /></div></div>
+          <div class="input-group"><label class="input-label">梱包・送料</label><div class="input-wrap"><span class="prefix">¥</span><input type="number" id="shipping" value="300" min="0" oninput="calc()" /></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <p class="card-title">販売プラットフォーム</p>
+        <div class="platform-group">
+          <button class="platform-btn active" id="plt-minne" onclick="setPlatform(this,0.10)"><span>minne</span><span class="platform-fee">手数料 10%</span></button>
+          <button class="platform-btn" id="plt-creema" onclick="setPlatform(this,0.11)"><span>Creema</span><span class="platform-fee">手数料 11%</span></button>
+          <button class="platform-btn" id="plt-other" onclick="setPlatform(this,parseFloat(document.getElementById('other-fee').value)/100||0.05)">
+            <span>その他</span>
+            <span class="fee-edit">手数料<input type="number" id="other-fee" value="5" min="0" max="100" step="0.1" style="width:52px;padding:0.25rem 0.4rem;font-size:0.85rem;border:2px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text-primary);font-weight:900;text-align:center;" onclick="event.stopPropagation()" oninput="if(document.getElementById('plt-other').classList.contains('active')){feeRate=parseFloat(this.value)/100||0.05;calc()}" />%</span>
+          </button>
+        </div>
+      </div>
+      <div class="card">
+        <p class="card-title">こだわり評価</p>
+        <div class="star-section"><span class="star-label"><strong>希少度</strong>　この素材・デザインがどれだけ珍しいか</span><div class="stars" id="stars-rare"></div></div>
+        <div class="star-section"><span class="star-label"><strong>職人度</strong>　技術・熟練度の高さ</span><div class="stars" id="stars-skill"></div></div>
+        <div class="star-section"><span class="star-label"><strong>再現難易度</strong>　同じものを他人が再現できない度合い</span><div class="stars" id="stars-repro"></div></div>
+        <div class="coeff-wrap">
+          <div class="coeff-header"><span class="coeff-label">こだわり係数</span><span class="coeff-value" id="coeff-label">× 2.5</span></div>
+          <div class="coeff-bar-bg"><div class="coeff-bar" id="coeff-bar" style="width:50%"></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <p class="card-title">計算結果</p>
+        <div class="result-grid">
+          <div class="result-item main"><p class="result-label">推奨販売価格</p><p class="result-value" id="price">¥—</p></div>
+          <div class="result-item"><p class="result-label">コスト合計</p><p class="result-value" id="cost">¥—</p></div>
+          <div class="result-item profit"><p class="result-label">利益額</p><p class="result-value" id="profit">¥—</p></div>
+        </div>
+        <p class="fee-note" id="fee-note">手数料（10%）を差し引いた金額</p>
+        <button class="btn btn-secondary" style="width:100%;margin-top:0.75rem;" onclick="transferToItem()">📦 この価格で作品登録へ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 作品一覧 -->
+  <div class="page" id="page-items">
+    <div class="container">
+      <div class="search-bar"><input type="text" id="search-input" placeholder="作品名で検索…" oninput="renderItems()" /></div>
+      <div class="filter-row">
+        <select id="filter-series" onchange="renderItems()"><option value="">すべてのシリーズ</option></select>
+        <select id="filter-status" onchange="renderItems()"><option value="">すべての状態</option><option>出品中</option><option>在庫あり</option><option>売切れ</option><option>非公開</option></select>
+        <select id="sort-order" onchange="renderItems()"><option value="date-desc">新しい順</option><option value="date-asc">古い順</option><option value="price-desc">価格（高）</option><option value="price-asc">価格（安）</option><option value="stock-desc">在庫（多）</option></select>
+      </div>
+      <button class="add-btn" onclick="showItemForm(null)">＋ 作品を追加</button>
+      <div id="items-list"></div>
+    </div>
+  </div>
+
+  <!-- 作品詳細 -->
+  <div class="page" id="page-item-detail">
+    <div class="container">
+      <div class="tab-bar">
+        <button class="tab-btn active" id="tab-manage" onclick="switchTab('manage')">📋 管理</button>
+        <button class="tab-btn" id="tab-publish" onclick="switchTab('publish')">📢 発信</button>
+      </div>
+      <div id="tab-content-manage">
+        <div class="card">
+          <p class="card-title">作品情報</p>
+          <div id="detail-info"></div>
+          <div style="display:flex;gap:0.5rem;margin-top:0.75rem;">
+            <button class="btn btn-secondary" style="flex:1;" onclick="showItemForm(currentItemId)">✏️ 編集する</button>
+            <button class="btn btn-danger" style="flex:1;" onclick="showConfirm('item',currentItemId)">🗑️ 削除</button>
+          </div>
+        </div>
+        <div class="card"><p class="card-title">制作ログ</p><div id="detail-logs"></div><button class="btn btn-secondary" style="width:100%;margin-top:0.5rem;" onclick="addLogFromItem()">＋ ログを追加</button></div>
+        <div class="card"><p class="card-title">価格計算へ</p><button class="detail-link-btn" onclick="showPage('page-price')">💴 価格計算ページへ</button></div>
+      </div>
+      <div id="tab-content-publish" style="display:none;">
+        <div class="card"><p class="card-title">SNS投稿画像</p><div id="detail-sns-images"></div><button class="btn btn-secondary" style="width:100%;margin-top:0.5rem;" onclick="goToSnsFromItem()">📸 SNS画像を作る</button></div>
+        <div class="card">
+          <p class="card-title">作品写真</p>
+          <div id="detail-photos"></div>
+          <div class="input-group" style="margin-top:0.5rem;">
+            <input type="file" accept="image/*" multiple class="file-input" id="item-photo-input" onchange="addItemPhotos(this)" />
+          </div>
+        </div>
+        <div class="card"><p class="card-title">出品情報</p><div id="detail-publish-info"></div><button class="btn btn-secondary" style="width:100%;margin-top:0.75rem;" onclick="showItemForm(currentItemId)">✏️ 編集する</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 作品フォーム -->
+  <div class="page" id="page-item-form">
+    <div class="container">
+      <div class="form-section">
+        <p class="form-section-title">基本情報</p>
+        <div class="input-group"><label class="input-label">作品名</label><input type="text" id="form-name" placeholder="例：桜のピアス" /></div>
+        <div class="input-group"><label class="input-label">シリーズ</label><input type="text" id="form-series" placeholder="例：春コレクション（任意）" /></div>
+        <div class="input-group">
+          <label class="input-label">カテゴリ</label>
+          <div class="checkbox-group" id="form-category-group" style="margin-bottom:0.5rem;">
+            <button class="check-btn" onclick="toggleCategory(this)">アクセサリー</button>
+            <button class="check-btn" onclick="toggleCategory(this)">布小物</button>
+            <button class="check-btn" onclick="toggleCategory(this)">レザー</button>
+            <button class="check-btn" onclick="toggleCategory(this)">和小物</button>
+            <button class="check-btn" onclick="toggleCategory(this)">フラワー</button>
+            <button class="check-btn" onclick="toggleCategory(this)">陶芸</button>
+            <button class="check-btn" onclick="toggleCategory(this)">刺繍</button>
+            <button class="check-btn" onclick="toggleCategory(this)">編み物</button>
+            <button class="check-btn" onclick="toggleCategory(this)">木工</button>
+            <button class="check-btn" onclick="toggleCategory(this)">キャンドル</button>
+            <button class="check-btn" onclick="toggleCategory(this)">ガラス</button>
+            <button class="check-btn" onclick="toggleCategory(this)">その他</button>
+          </div>
+          <input type="text" id="form-category-custom" placeholder="カテゴリを直接入力（任意）" />
+        </div>
+      </div>
+      <div class="form-section">
+        <p class="form-section-title">販売情報</p>
+        <div class="input-row">
+          <div class="input-group"><label class="input-label">販売価格</label><div class="input-wrap"><span class="prefix">¥</span><input type="number" id="form-price" placeholder="0" min="0" /></div></div>
+          <div class="input-group"><label class="input-label">在庫数</label><input type="number" id="form-stock" placeholder="0" min="0" /></div>
+        </div>
+        <div class="input-group">
+          <label class="input-label">出品先</label>
+          <div class="checkbox-group" id="form-platforms" style="margin-bottom:0.5rem;">
+            <button class="check-btn" onclick="togglePlatform(this)">minne</button>
+            <button class="check-btn" onclick="togglePlatform(this)">Creema</button>
+            <button class="check-btn" onclick="togglePlatform(this)">メルカリ</button>
+            <button class="check-btn" onclick="togglePlatform(this)">BASE</button>
+            <button class="check-btn" onclick="togglePlatform(this)">iichi</button>
+            <button class="check-btn" onclick="togglePlatform(this)">非公開</button>
+          </div>
+          <input type="text" id="form-platform-custom" placeholder="その他の出品先を入力（任意）" />
+        </div>
+      </div>
+      <div class="form-section"><p class="form-section-title">メモ</p><textarea id="form-memo" placeholder="素材・こだわりポイントなど"></textarea></div>
+      <div class="btn-row"><button class="btn btn-secondary" onclick="goBack()">キャンセル</button><button class="btn btn-primary" onclick="saveItem()">保存する</button></div>
+      <div style="margin-top:0.75rem;" id="delete-btn-wrap"></div>
+    </div>
+  </div>
+
+  <!-- SNS画像生成 -->
+  <div class="page" id="page-sns">
+    <div class="container">
+
+      <div class="form-section">
+        <p class="form-section-title">プラットフォーム・サイズ</p>
+        <div class="checkbox-group" id="sns-platform-group">
+          <button class="check-btn active" onclick="selectSnsPlatform(this,'1:1')">Instagram フィード 1:1</button>
+          <button class="check-btn" onclick="selectSnsPlatform(this,'9:16')">Instagramストーリー 9:16</button>
+          <button class="check-btn" onclick="selectSnsPlatform(this,'16:9')">X(Twitter) 16:9</button>
+          <button class="check-btn" onclick="selectSnsPlatform(this,'1:1')">minne/Creema/メルカリ 1:1</button>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <p class="form-section-title">テンプレート（背景色）</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;" id="template-group">
+          <button class="check-btn active" onclick="selectTemplate(this,'natural')">🌿 ナチュラル</button>
+          <button class="check-btn" onclick="selectTemplate(this,'wa')">🍵 和</button>
+          <button class="check-btn" onclick="selectTemplate(this,'pop')">🎀 ポップ</button>
+          <button class="check-btn" onclick="selectTemplate(this,'minimal')">⬛ ミニマル</button>
+          <button class="check-btn" onclick="selectTemplate(this,'kids')">🧸 キッズ</button>
+          <button class="check-btn" onclick="selectTemplate(this,'luxury')">✨ ラグジュアリー</button>
+          <button class="check-btn" onclick="selectTemplate(this,'custom')" style="grid-column:1/-1;">✏️ カスタム</button>
+        </div>
+      </div>
+
+      <div class="form-section" id="custom-panel" style="display:none;">
+        <p class="form-section-title">カスタム背景色</p>
+        <div class="input-row">
+          <div class="input-group"><label class="input-label">背景色</label><input type="color" id="custom-bg" value="#f5f0e8" oninput="renderEditor()" style="width:100%;height:44px;border:2px solid var(--border);border-radius:10px;cursor:pointer;padding:3px;" /></div>
+          <div class="input-group"><label class="input-label">文字色</label><input type="color" id="custom-text" value="#2a1f0a" oninput="renderEditor()" style="width:100%;height:44px;border:2px solid var(--border);border-radius:10px;cursor:pointer;padding:3px;" /></div>
+        </div>
+        <div class="input-row">
+          <div class="input-group"><label class="input-label">アクセント</label><input type="color" id="custom-accent" value="#7a9e6a" oninput="renderEditor()" style="width:100%;height:44px;border:2px solid var(--border);border-radius:10px;cursor:pointer;padding:3px;" /></div>
+          <div class="input-group"><label class="input-label">価格ラベル</label><input type="color" id="custom-label-bg" value="#7a9e6a" oninput="renderEditor()" style="width:100%;height:44px;border:2px solid var(--border);border-radius:10px;cursor:pointer;padding:3px;" /></div>
+        </div>
+        <div class="input-group"><label class="input-label">価格ラベル文字色</label>
+          <div class="checkbox-group">
+            <button class="check-btn active" onclick="setLabelColor(this,'#ffffff')">白</button>
+            <button class="check-btn" onclick="setLabelColor(this,'#000000')">黒</button>
+            <button class="check-btn" onclick="setLabelColor(this,'#ffff00')">黄</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <p class="form-section-title">作品情報テキスト</p>
+        <div class="input-group"><label class="input-label">作品名</label><input type="text" id="sns-name" placeholder="例：桜のピアス" oninput="renderEditor()" /></div>
+        <div class="input-group"><label class="input-label">価格</label><div class="input-wrap"><span class="prefix">¥</span><input type="number" id="sns-price" placeholder="0" oninput="renderEditor()" /></div></div>
+        <div class="input-group"><label class="input-label">一言コメント（任意）</label><input type="text" id="sns-comment" placeholder="例：春限定カラーです🌸" oninput="renderEditor()" /></div>
+      </div>
+
+      <div class="form-section">
+        <p class="form-section-title">画像エディタ</p>
+        <div id="sns-editor-wrap"><canvas id="sns-editor-canvas"></canvas></div>
+        <div style="margin-top:0.6rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+          <label class="btn btn-secondary btn-sm" style="cursor:pointer;display:inline-block;">📷 写真を追加<input type="file" accept="image/*" style="display:none;" onchange="addLayer(this)" /></label>
+          <button class="btn btn-danger btn-sm" onclick="resetEditor()">🗑️ 全リセット</button>
+        </div>
+      </div>
+
+      <div class="form-section" id="layer-section" style="display:none;">
+        <p class="form-section-title">レイヤー操作</p>
+        <p class="scale-hint">
+          📌 写真をタップで選択<br>
+          ↔️ ドラッグで移動（スマホはタッチ）<br>
+          🔍 ピンチ操作で拡大縮小・回転<br>
+          ✂️ 枠スケール：スライダーで表示領域を調整
+        </p>
+        <div id="layer-list" style="margin-top:0.7rem;"></div>
+      </div>
+
+      <button class="btn btn-primary" onclick="downloadFinal()">⬇️ 画像を保存</button>
+      <button class="btn btn-secondary" style="width:100%;margin-top:0.5rem;" onclick="saveSnsToItem()">📦 作品管理に保存</button>
+
+    </div>
+  </div>
+
+  <!-- 制作ログ一覧 -->
+  <div class="page" id="page-log">
+    <div class="container">
+      <div class="search-bar"><input type="text" id="log-search" placeholder="作品名・メモで検索…" oninput="renderLogs()" /></div>
+      <button class="add-btn" onclick="showLogForm(null)">＋ ログを追加</button>
+      <div id="logs-list"></div>
+    </div>
+  </div>
+
+  <!-- 制作ログフォーム -->
+  <div class="page" id="page-log-form">
+    <div class="container">
+      <div class="form-section">
+        <p class="form-section-title">制作写真</p>
+        <input type="file" id="log-photos" accept="image/*" multiple class="file-input" onchange="addLogPhotos(this)" />
+        <div class="photo-preview" id="log-photo-preview"></div>
+      </div>
+      <div class="form-section">
+        <p class="form-section-title">基本情報</p>
+        <div class="input-group"><label class="input-label">作品名</label><input type="text" id="log-name" placeholder="例：桜のピアス" /></div>
+        <div class="input-group"><label class="input-label">制作日</label><input type="date" id="log-date" /></div>
+      </div>
+      <div class="form-section">
+        <p class="form-section-title">使用素材・材料費</p>
+        <div id="log-materials"></div>
+        <button class="btn btn-secondary" style="width:100%;margin-top:0.5rem;" onclick="addMaterial()">＋ 素材を追加</button>
+        <div style="margin-top:0.7rem;padding:0.7rem 1rem;background:var(--accent-light);border-radius:10px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-weight:900;color:var(--text-secondary);">素材費合計</span>
+          <span style="font-size:1.2rem;font-weight:900;color:var(--accent-dark);" id="log-total">¥0</span>
+        </div>
+      </div>
+      <div class="form-section"><p class="form-section-title">工程メモ</p><textarea id="log-memo" placeholder="こだわりポイント・手順など"></textarea></div>
+      <div class="form-section">
+        <p class="form-section-title">完成度</p>
+        <div class="checkbox-group">
+          <button class="check-btn" id="log-status-making" onclick="setLogStatus('制作中')">🔨 制作中</button>
+          <button class="check-btn active" id="log-status-done" onclick="setLogStatus('完成')">✅ 完成</button>
+          <button class="check-btn" id="log-status-hold" onclick="setLogStatus('保留')">⏸ 保留</button>
+        </div>
+      </div>
+      <div class="btn-row"><button class="btn btn-secondary" onclick="goBack()">キャンセル</button><button class="btn btn-primary" onclick="saveLog()">保存する</button></div>
+      <div style="margin-top:0.75rem;" id="log-delete-btn-wrap"></div>
+    </div>
+  </div>
+
+  <div class="confirm-overlay" id="confirm-overlay">
+    <div class="confirm-box">
+      <p id="confirm-msg">削除しますか？</p>
+      <div class="btn-row"><button class="btn btn-secondary" onclick="closeConfirm()">キャンセル</button><button class="btn btn-danger" onclick="confirmDelete()">削除する</button></div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <button class="nav-btn active" id="nav-home" onclick="goHome()"><span class="nav-icon">🏠</span>ホーム</button>
+    <button class="nav-btn" id="nav-price" onclick="showPage('page-price')"><span class="nav-icon">💴</span>価格計算</button>
+    <button class="nav-btn" id="nav-items" onclick="showPage('page-items')"><span class="nav-icon">📦</span>作品管理</button>
+    <button class="nav-btn" id="nav-sns" onclick="showPage('page-sns')"><span class="nav-icon">📸</span>SNS画像</button>
+    <button class="nav-btn" id="nav-log" onclick="showPage('page-log')"><span class="nav-icon">📝</span>制作ログ</button>
+  </nav>
+
+<script>
+// ===== テーマ =====
+let isDark=false;
+function applyTheme(){document.documentElement.setAttribute('data-theme',isDark?'dark':'light');}
+function toggleTheme(){isDark=!isDark;applyTheme();}
+
+// ===== ページ遷移 =====
+let pageHistory=['page-home'];
+let currentItemId=null;
+
+function showPage(pageId){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(pageId).classList.add('active');
+  if(pageHistory[pageHistory.length-1]!==pageId) pageHistory.push(pageId);
+  updateHeader(pageId);updateNav(pageId);
+  window.scrollTo(0,0);
+  if(pageId==='page-sns') setTimeout(()=>initEditor(),100);
+}
+function goBack(){
+  if(pageHistory.length>1){
+    pageHistory.pop();
+    const prev=pageHistory[pageHistory.length-1];
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.getElementById(prev).classList.add('active');
+    updateHeader(prev);updateNav(prev);
+    window.scrollTo(0,0);
+  }
+}
+function goHome(){pageHistory=['page-home'];showPage('page-home');}
+
+function updateHeader(pageId){
+  const item=items.find(i=>i.id===currentItemId);
+  const titles={
+    'page-home':'手値','page-price':'価格計算','page-items':'作品管理',
+    'page-item-detail':item?.name||'作品詳細','page-item-form':'作品を編集',
+    'page-log':'制作ログ','page-log-form':'制作ログ編集',
+  };
+  // SNSページはヘッダーに編集中作品名を表示
+  if(pageId==='page-sns'){
+    const el=document.getElementById('page-title');
+    el.innerHTML='SNS画像'+(item?` <span class="current-item-badge">編集中：${item.name}</span>`:'');
+  } else {
+    document.getElementById('page-title').textContent=titles[pageId]||'';
+  }
+  document.getElementById('back-btn').classList.toggle('visible',pageId!=='page-home');
+}
+
+function updateNav(pageId){
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  const map={'page-home':'nav-home','page-price':'nav-price','page-items':'nav-items','page-item-detail':'nav-items','page-item-form':'nav-items','page-sns':'nav-sns','page-log':'nav-log','page-log-form':'nav-log'};
+  if(map[pageId]) document.getElementById(map[pageId]).classList.add('active');
+}
+
+function switchTab(tab){
+  document.getElementById('tab-manage').classList.toggle('active',tab==='manage');
+  document.getElementById('tab-publish').classList.toggle('active',tab==='publish');
+  document.getElementById('tab-content-manage').style.display=tab==='manage'?'block':'none';
+  document.getElementById('tab-content-publish').style.display=tab==='publish'?'block':'none';
+}
+
+// ===== 価格計算 =====
+const ratings={rare:3,skill:3,repro:3};
+let feeRate=0.10;
+const coeffMap=[1.5,2.0,2.5,3.0,4.0];
+function buildStars(cid,key){
+  const el=document.getElementById(cid);el.innerHTML='';
+  for(let i=1;i<=5;i++){const s=document.createElement('span');s.className='star'+(i<=ratings[key]?' active':'');s.textContent='★';s.onclick=()=>{ratings[key]=i;buildStars(cid,key);calc();};el.appendChild(s);}
+}
+function setPlatform(btn,rate){document.querySelectorAll('.platform-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');feeRate=rate;calc();}
+function calc(){
+  const mat=parseFloat(document.getElementById('material').value)||0;
+  const ship=parseFloat(document.getElementById('shipping').value)||0;
+  const base=mat+ship;
+  const avg=(ratings.rare+ratings.skill+ratings.repro)/3;
+  const idx=Math.round(avg)-1;
+  const coeff=coeffMap[Math.max(0,Math.min(4,idx))];
+  const price=Math.round(base*coeff/(1-feeRate));
+  const profit=price-Math.round(price*feeRate)-base;
+  document.getElementById('cost').textContent='¥'+base.toLocaleString();
+  document.getElementById('price').textContent='¥'+price.toLocaleString();
+  document.getElementById('profit').textContent='¥'+profit.toLocaleString();
+  document.getElementById('coeff-label').textContent='× '+coeff.toFixed(1);
+  document.getElementById('coeff-bar').style.width=((coeff-1.5)/2.5*100)+'%';
+  document.getElementById('fee-note').textContent='手数料（'+Math.round(feeRate*100)+'%）を差し引いた金額';
+}
+function transferToItem(){
+  const price=document.getElementById('price').textContent.replace('¥','').replace(',','');
+  showItemForm(null);
+  if(price&&price!=='—') setTimeout(()=>{document.getElementById('form-price').value=price;},50);
+}
+buildStars('stars-rare','rare');buildStars('stars-skill','skill');buildStars('stars-repro','repro');calc();
+
+// ===== 作品管理 =====
+let items=JSON.parse(localStorage.getItem('tene-items')||'[]');
+let deleteTarget={type:null,id:null};
+function saveItems(){localStorage.setItem('tene-items',JSON.stringify(items));}
+
+function renderItems(){
+  const search=document.getElementById('search-input').value.toLowerCase();
+  const fSeries=document.getElementById('filter-series').value;
+  const fStatus=document.getElementById('filter-status').value;
+  const sort=document.getElementById('sort-order').value;
+  let filtered=items.filter(item=>{
+    if(search&&!item.name.toLowerCase().includes(search)) return false;
+    if(fSeries&&item.series!==fSeries) return false;
+    if(fStatus){
+      if(fStatus==='売切れ'&&item.stock>0) return false;
+      if(fStatus==='在庫あり'&&item.stock<=0) return false;
+      if(fStatus==='出品中'&&!(item.platforms||[]).some(p=>p!=='非公開')) return false;
+      if(fStatus==='非公開'&&!(item.platforms||[]).includes('非公開')) return false;
+    }
+    return true;
+  });
+  filtered.sort((a,b)=>{
+    // 現在選択中の作品を先頭に
+    if(a.id===currentItemId) return -1;
+    if(b.id===currentItemId) return 1;
+    if(sort==='date-desc') return b.id-a.id;
+    if(sort==='date-asc') return a.id-b.id;
+    if(sort==='price-desc') return b.price-a.price;
+    if(sort==='price-asc') return a.price-b.price;
+    if(sort==='stock-desc') return b.stock-a.stock;
+    return 0;
+  });
+  const list=document.getElementById('items-list');
+  if(!filtered.length){list.innerHTML='<div class="empty-state">作品がまだありません。</div>';return;}
+  list.innerHTML=filtered.map(item=>{
+    const thumb=(item.photos||[]).length>0?`<img src="${item.photos[0]}" style="width:52px;height:52px;object-fit:cover;border-radius:8px;border:2px solid var(--border);flex-shrink:0;" />`:'';
+    const isCurrent=item.id===currentItemId;
+    return `<div class="item-card${isCurrent?' current-item':''}" onclick="showItemDetail(${item.id})">
+      ${isCurrent?'<div style="font-size:0.75rem;color:var(--accent);font-weight:900;margin-bottom:0.3rem;">▶ 編集中</div>':''}
+      <div class="item-header"><div style="display:flex;gap:0.5rem;align-items:flex-start;flex:1;">${thumb}<div><div class="item-name">${item.name}</div>${item.series?`<div class="item-series">📁 ${item.series}</div>`:''}</div></div><div style="font-size:1rem;font-weight:900;color:var(--accent);white-space:nowrap;">¥${(item.price||0).toLocaleString()}</div></div>
+      <div class="item-meta"><span class="item-badge ${item.stock===0?'stock-zero':''}">在庫 ${item.stock||0}点</span>${item.category?`<span class="item-badge">${item.category}</span>`:''}${(item.platforms||[]).map(p=>`<span class="item-badge platform">${p}</span>`).join('')}</div>
+    </div>`;
+  }).join('');
+}
+
+function updateSeriesFilter(){
+  const series=[...new Set(items.map(i=>i.series).filter(Boolean))];
+  const sel=document.getElementById('filter-series');const cur=sel.value;
+  sel.innerHTML='<option value="">すべてのシリーズ</option>'+series.map(s=>`<option value="${s}" ${s===cur?'selected':''}>${s}</option>`).join('');
+}
+
+function showItemDetail(id){
+  currentItemId=id;const item=items.find(i=>i.id===id);if(!item)return;
+  switchTab('manage');
+  document.getElementById('detail-info').innerHTML=`<div style="display:flex;flex-direction:column;gap:0.4rem;"><div style="font-size:1.1rem;font-weight:900;">${item.name}</div>${item.series?`<div style="color:var(--text-secondary);font-size:0.85rem;">📁 ${item.series}</div>`:''}${item.category?`<div style="color:var(--text-secondary);font-size:0.85rem;">🏷 ${item.category}</div>`:''}<div style="font-size:1.3rem;font-weight:900;color:var(--accent);">¥${(item.price||0).toLocaleString()}</div><div style="color:var(--text-secondary);font-size:0.9rem;">在庫 ${item.stock||0}点</div>${item.memo?`<div style="color:var(--text-secondary);font-size:0.85rem;margin-top:0.3rem;">${item.memo}</div>`:''}</div>`;
+  const relatedLogs=logs.filter(l=>l.itemId===id);
+  document.getElementById('detail-logs').innerHTML=!relatedLogs.length?'<div style="color:var(--text-secondary);font-size:0.85rem;padding:0.5rem 0;">まだ制作ログがありません</div>':relatedLogs.map(l=>`<div class="log-mini-card" onclick="showLogForm(${l.id})"><div style="font-weight:900;">${l.status==='完成'?'✅':l.status==='制作中'?'🔨':'⏸'} ${l.name}</div>${l.date?`<div style="font-size:0.8rem;color:var(--text-secondary);">📅 ${l.date}</div>`:''}</div>`).join('');
+  const snsImages=item.snsImages||[];
+  document.getElementById('detail-sns-images').innerHTML=snsImages.length?`<div class="photo-preview">${snsImages.map((src,i)=>`<div class="photo-thumb"><img src="${src}" /><button class="del-btn" onclick="deleteItemSns(${id},${i})">✕</button></div>`).join('')}</div>`:'<div style="color:var(--text-secondary);font-size:0.85rem;padding:0.5rem 0;">まだSNS画像がありません</div>';
+  const photos=item.photos||[];
+  document.getElementById('detail-photos').innerHTML=photos.length?`<div class="photo-preview">${photos.map((src,i)=>`<div class="photo-thumb"><img src="${src}" /><button class="del-btn" onclick="deleteItemPhoto(${id},${i})">✕</button></div>`).join('')}</div>`:'<div style="color:var(--text-secondary);font-size:0.85rem;padding:0.5rem 0;">まだ写真がありません</div>';
+  document.getElementById('detail-publish-info').innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:0.4rem;">${(item.platforms||[]).map(p=>`<span class="item-badge platform">${p}</span>`).join('')}</div>`;
+  showPage('page-item-detail');updateHeader('page-item-detail');
+}
+
+function showItemForm(id){
+  currentItemId=id||currentItemId;
+  const item=id?items.find(i=>i.id===id):null;
+  document.getElementById('form-name').value=item?.name||'';
+  document.getElementById('form-series').value=item?.series||'';
+  // カテゴリ
+  document.querySelectorAll('#form-category-group .check-btn').forEach(btn=>{
+    btn.classList.toggle('active',(item?.categories||[]).includes(btn.textContent));
+  });
+  document.getElementById('form-category-custom').value=item?.categoryCustom||'';
+  document.getElementById('form-price').value=item?.price||'';
+  document.getElementById('form-stock').value=item?.stock||'';
+  // 出品先
+  document.querySelectorAll('#form-platforms .check-btn').forEach(btn=>{
+    btn.classList.toggle('active',(item?.platforms||[]).includes(btn.textContent));
+  });
+  document.getElementById('form-platform-custom').value=item?.platformCustom||'';
+  document.getElementById('form-memo').value=item?.memo||'';
+  document.getElementById('delete-btn-wrap').innerHTML=id?`<button class="btn btn-danger" style="width:100%" onclick="showConfirm('item',${id})">🗑️ この作品を削除</button>`:'';
+  showPage('page-item-form');
+}
+
+function toggleCategory(btn){
+  // 単一選択
+  document.querySelectorAll('#form-category-group .check-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+function togglePlatform(btn){btn.classList.toggle('active');}
+
+function saveItem(){
+  const name=document.getElementById('form-name').value.trim();
+  if(!name){alert('作品名を入力してください');return;}
+  const selectedCat=document.querySelector('#form-category-group .check-btn.active');
+  const catCustom=document.getElementById('form-category-custom').value.trim();
+  const category=catCustom||(selectedCat?.textContent||'');
+  const platforms=[...document.querySelectorAll('#form-platforms .check-btn.active')].map(b=>b.textContent);
+  const platformCustom=document.getElementById('form-platform-custom').value.trim();
+  if(platformCustom) platforms.push(platformCustom);
+  const data={name,series:document.getElementById('form-series').value.trim(),category,categories:[selectedCat?.textContent||''],categoryCustom:catCustom,price:parseInt(document.getElementById('form-price').value)||0,stock:parseInt(document.getElementById('form-stock').value)||0,platforms,platformCustom,memo:document.getElementById('form-memo').value.trim()};
+  if(currentItemId&&items.find(i=>i.id===currentItemId)){
+    const idx=items.findIndex(i=>i.id===currentItemId);items[idx]={...items[idx],...data};
+  } else {
+    data.id=Date.now();data.photos=[];data.snsImages=[];items.unshift(data);currentItemId=data.id;
+  }
+  saveItems();updateSeriesFilter();renderItems();showItemDetail(currentItemId);
+}
+
+function addItemPhotos(input){
+  const item=items.find(i=>i.id===currentItemId);if(!item)return;
+  if(!item.photos)item.photos=[];
+  const files=Array.from(input.files);let loaded=0;
+  files.forEach(file=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      item.photos.push(e.target.result);loaded++;
+      if(loaded===files.length){
+        saveItems();
+        // 発信タブのみ更新、タブは切り替えない
+        const photos=item.photos||[];
+        document.getElementById('detail-photos').innerHTML=photos.length?`<div class="photo-preview">${photos.map((src,i)=>`<div class="photo-thumb"><img src="${src}" /><button class="del-btn" onclick="deleteItemPhoto(${currentItemId},${i})">✕</button></div>`).join('')}</div>`:'<div style="color:var(--text-secondary);font-size:0.85rem;padding:0.5rem 0;">まだ写真がありません</div>';
+        // ファイル入力をリセット
+        document.getElementById('item-photo-input').value='';
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function deleteItemPhoto(id,idx){const item=items.find(i=>i.id===id);if(!item)return;item.photos.splice(idx,1);saveItems();showItemDetail(id);switchTab('publish');}
+function deleteItemSns(id,idx){const item=items.find(i=>i.id===id);if(!item)return;item.snsImages.splice(idx,1);saveItems();showItemDetail(id);switchTab('publish');}
+function addLogFromItem(){const item=items.find(i=>i.id===currentItemId);showLogForm(null);if(item)setTimeout(()=>{document.getElementById('log-name').value=item.name;logLinkedItemId=currentItemId;},50);}
+function goToSnsFromItem(){showPage('page-sns');setTimeout(()=>{const item=items.find(i=>i.id===currentItemId);if(item){document.getElementById('sns-name').value=item.name;document.getElementById('sns-price').value=item.price||'';}renderEditor();},150);}
+function saveSnsToItem(){
+  const canvas=document.getElementById('sns-editor-canvas');
+  const item=items.find(i=>i.id===currentItemId);
+  if(!item){alert('作品を選択してから保存してください');return;}
+  if(!item.snsImages)item.snsImages=[];
+  item.snsImages.push(canvas.toDataURL('image/png'));
+  saveItems();alert('作品管理に保存しました！');
+}
+
+function showConfirm(type,id){
+  deleteTarget={type,id};
+  const msg=type==='item'?'この作品を削除しますか？\n紐付いた制作ログも含め\nすべて削除されます。':'このログを削除しますか？\n元に戻せません。';
+  document.getElementById('confirm-msg').textContent=msg;
+  document.getElementById('confirm-overlay').classList.add('visible');
+}
+function closeConfirm(){deleteTarget={type:null,id:null};document.getElementById('confirm-overlay').classList.remove('visible');}
+function confirmDelete(){
+  if(deleteTarget.type==='item'){
+    // 紐付きログも削除
+    logs=logs.filter(l=>l.itemId!==deleteTarget.id);
+    saveLogs();
+    items=items.filter(i=>i.id!==deleteTarget.id);
+    if(currentItemId===deleteTarget.id)currentItemId=null;
+    saveItems();updateSeriesFilter();renderItems();
+    pageHistory=pageHistory.filter(p=>p!=='page-item-form'&&p!=='page-item-detail');
+    showPage('page-items');
+  } else if(deleteTarget.type==='log'){
+    logs=logs.filter(l=>l.id!==deleteTarget.id);
+    saveLogs();renderLogs();
+    pageHistory=pageHistory.filter(p=>p!=='page-log-form');
+    if(logLinkedItemId){showItemDetail(logLinkedItemId);}
+    else showPage('page-log');
+  }
+  closeConfirm();
+}
+renderItems();
+
+// ===== SNS画像エディタ =====
+let snsTemplate='natural',snsAspect='1:1',customLabelColor='#ffffff';
+let layers=[],activeLayer=-1;
+let editorW=360,editorH=360;
+
+const templates={
+  natural:{bg:'#f5f0e8',text:'#2a1f0a',accent:'#7a9e6a',sub:'#a89070',label:'#ffffff',labelBg:'#7a9e6a'},
+  wa:     {bg:'#f0ebe0',text:'#2a1a0a',accent:'#8b5e3c',sub:'#b09070',label:'#ffffff',labelBg:'#8b5e3c'},
+  pop:    {bg:'#fff0f5',text:'#2a0a1a',accent:'#e0609a',sub:'#f0a0c0',label:'#ffffff',labelBg:'#e0609a'},
+  minimal:{bg:'#111111',text:'#ffffff', accent:'#ffffff',sub:'#888888',label:'#000000',labelBg:'#ffffff'},
+  kids:   {bg:'#fffbe0',text:'#2a1a00',accent:'#f0a020',sub:'#f0c870',label:'#ffffff',labelBg:'#f0a020'},
+  luxury: {bg:'#1a1510',text:'#f0e0b0',accent:'#c8a040',sub:'#806830',label:'#000000',labelBg:'#c8a040'},
+  custom: {bg:'#f5f0e8',text:'#2a1f0a',accent:'#7a9e6a',sub:'#a89070',label:'#ffffff',labelBg:'#7a9e6a'},
+};
+
+function selectTemplate(btn,key){
+  document.querySelectorAll('#template-group .check-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');snsTemplate=key;
+  document.getElementById('custom-panel').style.display=key==='custom'?'block':'none';
+  renderEditor();
+}
+function setLabelColor(btn,color){
+  document.querySelectorAll('#custom-panel .checkbox-group .check-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');customLabelColor=color;renderEditor();
+}
+function selectSnsPlatform(btn,aspect){
+  document.querySelectorAll('#sns-platform-group .check-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');snsAspect=aspect;initEditor();
+}
+function getT(){
+  if(snsTemplate==='custom'){return{bg:document.getElementById('custom-bg').value,text:document.getElementById('custom-text').value,accent:document.getElementById('custom-accent').value,sub:document.getElementById('custom-accent').value,label:customLabelColor,labelBg:document.getElementById('custom-label-bg').value};}
+  return templates[snsTemplate];
+}
+
+function initEditor(){
+  const canvas=document.getElementById('sns-editor-canvas');
+  const wrap=document.getElementById('sns-editor-wrap');
+  editorW=wrap.clientWidth||360;
+  editorH=snsAspect==='9:16'?Math.round(editorW*16/9):snsAspect==='16:9'?Math.round(editorW*9/16):editorW;
+  canvas.width=editorW;canvas.height=editorH;
+  canvas.style.width='100%';canvas.style.height='auto';
+  renderEditor();
+}
+
+function renderEditor(){
+  const canvas=document.getElementById('sns-editor-canvas');
+  if(!canvas||!canvas.width)return;
+  const ctx=canvas.getContext('2d');
+  const t=getT();
+  ctx.clearRect(0,0,editorW,editorH);
+  ctx.fillStyle=t.bg;
+  ctx.fillRect(0,0,editorW,editorH);
+
+  // レイヤー描画（配列順＝背面から前面）
+  layers.forEach((layer,i)=>{
+    ctx.save();
+    ctx.globalAlpha=layer.opacity;
+    ctx.translate(layer.x,layer.y);
+    ctx.rotate(layer.rotation*Math.PI/180);
+
+    const drawW=layer.img.naturalWidth*layer.scale;
+    const drawH=layer.img.naturalHeight*layer.scale;
+
+    // 枠スケール（クロップ）適用
+    if(layer.cropEnabled){
+      // cropRatio: 0〜1 で表示する割合（中央基準）
+      const visW=drawW*layer.cropW;
+      const visH=drawH*layer.cropH;
+      // 元画像のどこを切り取るか（ピクセル座標）
+      const srcX=layer.img.naturalWidth*(1-layer.cropW)/2;
+      const srcY=layer.img.naturalHeight*(1-layer.cropH)/2;
+      const srcW=layer.img.naturalWidth*layer.cropW;
+      const srcH=layer.img.naturalHeight*layer.cropH;
+      ctx.drawImage(layer.img,srcX,srcY,srcW,srcH,-visW/2,-visH/2,visW,visH);
+      if(i===activeLayer){
+        ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.setLineDash([8,4]);
+        ctx.strokeRect(-visW/2,-visH/2,visW,visH);
+        ctx.setLineDash([]);
+      }
+    } else {
+      ctx.drawImage(layer.img,-drawW/2,-drawH/2,drawW,drawH);
+      if(i===activeLayer){
+        ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.setLineDash([8,4]);
+        ctx.strokeRect(-drawW/2,-drawH/2,drawW,drawH);
+        ctx.setLineDash([]);
+      }
+    }
+    ctx.restore();
+  });
+
+  // 装飾ライン
+  ctx.fillStyle=t.accent;
+  ctx.fillRect(0,0,editorW,6);ctx.fillRect(0,editorH-6,editorW,6);
+
+  // テキスト
+  const name=document.getElementById('sns-name')?.value||'';
+  if(name){
+    ctx.fillStyle=t.text;
+    ctx.font=`900 ${Math.round(editorW*0.09)}px sans-serif`;
+    ctx.textAlign='center';
+    wrapText(ctx,name,editorW/2,editorH*0.42,editorW*0.85,Math.round(editorW*0.11));
+  }
+  const price=document.getElementById('sns-price')?.value;
+  if(price){
+    const priceText='¥'+parseInt(price).toLocaleString();
+    ctx.font=`900 ${Math.round(editorW*0.09)}px sans-serif`;
+    const pw=ctx.measureText(priceText).width+40;
+    ctx.fillStyle=t.labelBg;
+    roundRect(ctx,(editorW-pw)/2,editorH*0.57,pw,Math.round(editorW*0.13),8);ctx.fill();
+    ctx.fillStyle=t.label;ctx.textAlign='center';
+    ctx.fillText(priceText,editorW/2,editorH*0.57+Math.round(editorW*0.095));
+  }
+  const comment=document.getElementById('sns-comment')?.value;
+  if(comment){
+    ctx.fillStyle=t.sub;
+    ctx.font=`bold ${Math.round(editorW*0.048)}px sans-serif`;
+    ctx.textAlign='center';
+    ctx.fillText(comment,editorW/2,editorH*0.79);
+  }
+}
+
+function wrapText(ctx,text,x,y,maxWidth,lineHeight){
+  const chars=text.split('');let line='',lines=[];
+  for(let c of chars){const test=line+c;if(ctx.measureText(test).width>maxWidth&&line){lines.push(line);line=c;}else line=test;}
+  if(line)lines.push(line);
+  const startY=y-((lines.length-1)*lineHeight)/2;
+  lines.forEach((l,i)=>ctx.fillText(l,x,startY+i*lineHeight));
+}
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
+}
+
+function addLayer(input){
+  if(!input.files||!input.files[0])return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const img=new Image();
+    img.onload=()=>{
+      const scale=Math.min(editorW/img.naturalWidth,editorH/img.naturalHeight)*0.9;
+      layers.push({img,x:editorW/2,y:editorH/2,scale,rotation:0,opacity:1,cropEnabled:false,cropW:1.0,cropH:1.0});
+      activeLayer=layers.length-1;
+      renderEditor();renderLayerList();
+      document.getElementById('layer-section').style.display='block';
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(input.files[0]);
+  input.value='';
+}
+
+function renderLayerList(){
+  const el=document.getElementById('layer-list');
+  if(!layers.length){el.innerHTML='';return;}
+  // 表示は前面が上（配列末尾が前面）
+  const reversed=[...layers.map((l,i)=>({l,i}))].reverse();
+  el.innerHTML=reversed.map(({l,i})=>`
+    <div class="layer-card ${i===activeLayer?'active-layer':''}" onclick="setActiveLayer(${i})" style="display:flex;gap:0.5rem;align-items:flex-start;">
+      <img class="layer-thumb" src="${l.img.src}" />
+      <div class="layer-controls">
+        <div style="font-size:0.8rem;font-weight:900;margin-bottom:0.3rem;">レイヤー ${i+1}${i===activeLayer?' ◀ 選択中':''}</div>
+        <div class="layer-slider-row">拡大縮小
+          <input type="range" min="0.05" max="5" step="0.01" value="${l.scale}"
+            onclick="event.stopPropagation()"
+            oninput="event.stopPropagation();layers[${i}].scale=parseFloat(this.value);renderEditor()" />
+        </div>
+        <div class="layer-slider-row">回転
+          <input type="range" min="-180" max="180" step="1" value="${l.rotation}"
+            onclick="event.stopPropagation()"
+            oninput="event.stopPropagation();layers[${i}].rotation=parseFloat(this.value);renderEditor()" />
+        </div>
+        <div class="layer-slider-row">透明度
+          <input type="range" min="0.1" max="1" step="0.05" value="${l.opacity}"
+            onclick="event.stopPropagation()"
+            oninput="event.stopPropagation();layers[${i}].opacity=parseFloat(this.value);renderEditor()" />
+        </div>
+        <div style="margin-top:0.3rem;">
+          <label style="font-size:0.78rem;font-weight:900;color:var(--text-secondary);display:flex;align-items:center;gap:0.4rem;">
+            <input type="checkbox" ${l.cropEnabled?'checked':''} onclick="event.stopPropagation()" onchange="layers[${i}].cropEnabled=this.checked;renderEditor()" />
+            枠スケール ON
+          </label>
+          ${l.cropEnabled?`
+          <div class="layer-slider-row" style="margin-top:0.3rem;">横の表示範囲
+            <input type="range" min="0.1" max="1" step="0.01" value="${l.cropW}"
+              onclick="event.stopPropagation()"
+              oninput="event.stopPropagation();layers[${i}].cropW=parseFloat(this.value);renderEditor()" />
+          </div>
+          <div class="layer-slider-row">縦の表示範囲
+            <input type="range" min="0.1" max="1" step="0.01" value="${l.cropH}"
+              onclick="event.stopPropagation()"
+              oninput="event.stopPropagation();layers[${i}].cropH=parseFloat(this.value);renderEditor()" />
+          </div>`:''}
+        </div>
+        <div class="layer-btn-row">
+          <button class="layer-btn" onclick="event.stopPropagation();moveLayer(${i},1)">↑前面へ</button>
+          <button class="layer-btn" onclick="event.stopPropagation();moveLayer(${i},-1)">↓背面へ</button>
+          <button class="layer-btn danger" onclick="event.stopPropagation();removeLayer(${i})">削除</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function setActiveLayer(i){activeLayer=i;renderEditor();renderLayerList();}
+function removeLayer(i){
+  layers.splice(i,1);
+  activeLayer=layers.length>0?Math.min(activeLayer,layers.length-1):-1;
+  if(!layers.length)document.getElementById('layer-section').style.display='none';
+  renderEditor();renderLayerList();
+}
+function moveLayer(i,dir){
+  // dir=1: 前面（配列の後ろへ）、dir=-1: 背面（配列の前へ）
+  const ni=i+dir;if(ni<0||ni>=layers.length)return;
+  [layers[i],layers[ni]]=[layers[ni],layers[i]];activeLayer=ni;renderEditor();renderLayerList();
+}
+function resetEditor(){
+  if(!confirm('編集中の画像をすべてリセットしますか？'))return;
+  layers=[];activeLayer=-1;
+  document.getElementById('layer-section').style.display='none';
+  renderEditor();renderLayerList();
+}
+
+// タッチ・マウス操作
+const edCanvas=document.getElementById('sns-editor-canvas');
+let dragging=false,lastX=0,lastY=0,pinching=false,lastPinchDist=0,lastPinchAngle=0;
+
+function getCanvasPos(e,canvas){
+  const rect=canvas.getBoundingClientRect();
+  const sx=canvas.width/rect.width,sy=canvas.height/rect.height;
+  const src=e.touches?e.touches[0]:e;
+  return{x:(src.clientX-rect.left)*sx,y:(src.clientY-rect.top)*sy};
+}
+function getTouchDist(e){const dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;return Math.sqrt(dx*dx+dy*dy);}
+function getTouchAngle(e){return Math.atan2(e.touches[1].clientY-e.touches[0].clientY,e.touches[1].clientX-e.touches[0].clientX)*180/Math.PI;}
+
+function hitTest(e){
+  // タップ位置から最前面のレイヤーを選択
+  const p=getCanvasPos(e,edCanvas);
+  for(let i=layers.length-1;i>=0;i--){
+    const l=layers[i];
+    const dx=p.x-l.x,dy=p.y-l.y;
+    const rad=-l.rotation*Math.PI/180;
+    const rx=dx*Math.cos(rad)-dy*Math.sin(rad);
+    const ry=dx*Math.sin(rad)+dy*Math.cos(rad);
+    const hw=(l.cropEnabled?l.img.naturalWidth*l.scale*l.cropW:l.img.naturalWidth*l.scale)/2;
+    const hh=(l.cropEnabled?l.img.naturalHeight*l.scale*l.cropH:l.img.naturalHeight*l.scale)/2;
+    if(Math.abs(rx)<=hw&&Math.abs(ry)<=hh){return i;}
+  }
+  return -1;
+}
+
+edCanvas.addEventListener('mousedown',e=>{
+  const hit=hitTest(e);
+  if(hit>=0){activeLayer=hit;renderEditor();renderLayerList();}
+  dragging=true;const p=getCanvasPos(e,edCanvas);lastX=p.x;lastY=p.y;
+});
+edCanvas.addEventListener('mousemove',e=>{
+  if(!dragging||activeLayer<0)return;
+  const p=getCanvasPos(e,edCanvas);
+  layers[activeLayer].x+=p.x-lastX;layers[activeLayer].y+=p.y-lastY;
+  lastX=p.x;lastY=p.y;renderEditor();
+});
+edCanvas.addEventListener('mouseup',()=>{dragging=false;});
+edCanvas.addEventListener('mouseleave',()=>{dragging=false;});
+
+edCanvas.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  if(e.touches.length===1){
+    const hit=hitTest(e);
+    if(hit>=0){activeLayer=hit;renderEditor();renderLayerList();}
+    dragging=true;const p=getCanvasPos(e,edCanvas);lastX=p.x;lastY=p.y;
+  }
+  if(e.touches.length===2&&activeLayer>=0){pinching=true;dragging=false;lastPinchDist=getTouchDist(e);lastPinchAngle=getTouchAngle(e);}
+},{passive:false});
+
+edCanvas.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  if(e.touches.length===1&&dragging&&activeLayer>=0){
+    const p=getCanvasPos(e,edCanvas);
+    layers[activeLayer].x+=p.x-lastX;layers[activeLayer].y+=p.y-lastY;
+    lastX=p.x;lastY=p.y;renderEditor();
+  }
+  if(e.touches.length===2&&pinching&&activeLayer>=0){
+    const dist=getTouchDist(e),angle=getTouchAngle(e);
+    layers[activeLayer].scale*=dist/lastPinchDist;
+    layers[activeLayer].rotation+=angle-lastPinchAngle;
+    lastPinchDist=dist;lastPinchAngle=angle;renderEditor();renderLayerList();
+  }
+},{passive:false});
+edCanvas.addEventListener('touchend',e=>{e.preventDefault();dragging=false;pinching=false;},{passive:false});
+
+function downloadFinal(){
+  const canvas=document.getElementById('sns-editor-canvas');
+  const name=document.getElementById('sns-name').value||'作品';
+  const a=document.createElement('a');a.download=`tene_${name}.png`;a.href=canvas.toDataURL('image/png');a.click();
+}
+
+// ===== 制作ログ =====
+let logs=JSON.parse(localStorage.getItem('tene-logs')||'[]');
+let editingLogId=null,logLinkedItemId=null,logStatus='完成',logMaterials=[],logPhotos=[];
+function saveLogs(){localStorage.setItem('tene-logs',JSON.stringify(logs));}
+
+function renderLogs(){
+  const search=document.getElementById('log-search').value.toLowerCase();
+  let filtered=logs.filter(l=>(!search||l.name.toLowerCase().includes(search)||(l.memo||'').toLowerCase().includes(search)));
+  // 現在選択中の作品のログを先頭に
+  filtered.sort((a,b)=>{
+    const aLinked=a.itemId===currentItemId;
+    const bLinked=b.itemId===currentItemId;
+    if(aLinked&&!bLinked)return -1;
+    if(!aLinked&&bLinked)return 1;
+    return b.id-a.id;
+  });
+  const list=document.getElementById('logs-list');
+  if(!filtered.length){list.innerHTML='<div class="empty-state">制作ログがまだありません。</div>';return;}
+  // 現在の作品に紐付いたログがあれば区切りを表示
+  const hasLinked=filtered.some(l=>l.itemId===currentItemId);
+  const currentItem=items.find(i=>i.id===currentItemId);
+  list.innerHTML=(hasLinked&&currentItem?`<div style="font-size:0.8rem;font-weight:900;color:var(--accent);margin-bottom:0.4rem;">▶ 編集中：${currentItem.name} のログ</div>`:'')
+    +filtered.map(l=>{
+      const total=(l.materials||[]).reduce((s,m)=>s+(m.cost||0),0);
+      const si=l.status==='完成'?'✅':l.status==='制作中'?'🔨':'⏸';
+      const thumb=(l.photos||[]).length>0?`<img src="${l.photos[0]}" style="width:52px;height:52px;object-fit:cover;border-radius:8px;border:2px solid var(--border);flex-shrink:0;" />`:'';
+      const isLinked=l.itemId===currentItemId;
+      return `<div class="item-card${isLinked?' current-item':''}" onclick="showLogForm(${l.id})">
+        ${isLinked?'<div style="font-size:0.72rem;color:var(--accent);font-weight:900;margin-bottom:0.2rem;">▶ 編集中作品のログ</div>':''}
+        <div class="item-header"><div style="display:flex;gap:0.5rem;align-items:flex-start;flex:1;">${thumb}<div><div class="item-name">${si} ${l.name}</div>${l.date?`<div class="item-series">📅 ${l.date}</div>`:''}</div></div>${total>0?`<div style="font-size:1rem;font-weight:900;color:var(--accent);">¥${total.toLocaleString()}</div>`:''}</div>
+        ${l.memo?`<div style="font-size:0.82rem;color:var(--text-secondary);margin-top:0.3rem;">${l.memo.slice(0,40)}${l.memo.length>40?'…':''}</div>`:''}
+      </div>`;
+    }).join('');
+}
+
+function showLogForm(id){
+  editingLogId=id;const l=id?logs.find(l=>l.id===id):null;
+  logStatus=l?.status||'完成';logMaterials=JSON.parse(JSON.stringify(l?.materials||[]));
+  logPhotos=JSON.parse(JSON.stringify(l?.photos||[]));logLinkedItemId=l?.itemId||currentItemId||null;
+  document.getElementById('log-name').value=l?.name||'';
+  document.getElementById('log-date').value=l?.date||new Date().toISOString().split('T')[0];
+  document.getElementById('log-memo').value=l?.memo||'';
+  document.getElementById('log-photos').value='';
+  document.getElementById('log-delete-btn-wrap').innerHTML=id?`<button class="btn btn-danger" style="width:100%" onclick="showConfirm('log',${id})">🗑️ このログを削除</button>`:'';
+  renderMaterials();renderLogPhotos();updateLogStatus();
+  showPage('page-log-form');
+}
+function setLogStatus(s){logStatus=s;updateLogStatus();}
+function updateLogStatus(){
+  ['making','done','hold'].forEach(s=>document.getElementById('log-status-'+s).classList.remove('active'));
+  const map={'制作中':'making','完成':'done','保留':'hold'};
+  if(map[logStatus])document.getElementById('log-status-'+map[logStatus]).classList.add('active');
+}
+function addMaterial(){logMaterials.push({name:'',cost:0});renderMaterials();}
+function renderMaterials(){
+  document.getElementById('log-materials').innerHTML=logMaterials.map((m,i)=>`
+    <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;align-items:center;">
+      <input type="text" placeholder="素材名" value="${m.name}" oninput="logMaterials[${i}].name=this.value" style="flex:2;padding:0.6rem 0.75rem;border:2px solid var(--border);border-radius:10px;font-family:inherit;font-size:0.9rem;font-weight:700;background:var(--bg);color:var(--text-primary);outline:none;" />
+      <div style="position:relative;flex:1;"><span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--text-secondary);font-weight:900;">¥</span>
+        <input type="number" placeholder="0" value="${m.cost||''}" min="0" oninput="logMaterials[${i}].cost=parseInt(this.value)||0;updateLogTotal()" style="width:100%;padding:0.6rem 0.4rem 0.6rem 1.7rem;border:2px solid var(--border);border-radius:10px;font-family:inherit;font-size:0.9rem;font-weight:700;background:var(--bg);color:var(--text-primary);outline:none;-moz-appearance:textfield;" />
+      </div>
+      <button onclick="logMaterials.splice(${i},1);renderMaterials()" style="background:var(--red);color:#fff;border:none;border-radius:8px;padding:0.55rem 0.65rem;font-size:0.9rem;cursor:pointer;font-weight:900;flex-shrink:0;">✕</button>
+    </div>`).join('');
+  updateLogTotal();
+}
+function updateLogTotal(){document.getElementById('log-total').textContent='¥'+logMaterials.reduce((s,m)=>s+(m.cost||0),0).toLocaleString();}
+function addLogPhotos(input){
+  Array.from(input.files).forEach(file=>{const reader=new FileReader();reader.onload=e=>{logPhotos.push(e.target.result);renderLogPhotos();};reader.readAsDataURL(file);});
+  input.value='';
+}
+function renderLogPhotos(){
+  const el=document.getElementById('log-photo-preview');if(!el)return;
+  el.innerHTML=logPhotos.map((src,i)=>`<div class="photo-thumb"><img src="${src}" /><button class="del-btn" onclick="logPhotos.splice(${i},1);renderLogPhotos()">✕</button></div>`).join('');
+}
+function saveLog(){
+  const name=document.getElementById('log-name').value.trim();
+  if(!name){alert('作品名を入力してください');return;}
+  const data={name,date:document.getElementById('log-date').value,memo:document.getElementById('log-memo').value.trim(),status:logStatus,materials:JSON.parse(JSON.stringify(logMaterials)),photos:JSON.parse(JSON.stringify(logPhotos)),itemId:logLinkedItemId};
+  if(editingLogId){const idx=logs.findIndex(l=>l.id===editingLogId);logs[idx]={...logs[idx],...data};}
+  else{data.id=Date.now();logs.unshift(data);}
+  saveLogs();renderLogs();
+  if(logLinkedItemId){pageHistory=pageHistory.filter(p=>p!=='page-log-form');showItemDetail(logLinkedItemId);}
+  else goBack();
+}
+renderLogs();
+
+// ===== カレンダー =====
+let calYear=new Date().getFullYear(), calMonth=new Date().getMonth();
+let calSelected=null;
+
+function renderCalendar(){
+  const title=document.getElementById('cal-title');
+  const grid=document.getElementById('cal-grid');
+  if(!title||!grid)return;
+
+  title.textContent=calYear+'年'+(calMonth+1)+'月';
+
+  // イベントデータ収集
+  const itemDates={}, logDates={};
+  items.forEach(item=>{
+    if(!item.id)return;
+    const d=new Date(item.id);
+    const key=d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+    if(!itemDates[key])itemDates[key]=[];
+    itemDates[key].push(item);
+  });
+  logs.forEach(log=>{
+    if(!log.date)return;
+    const key=log.date.replace(/-0*/g,m=>m.replace(/-0/,'-'));
+    const parts=log.date.split('-');
+    const k=parseInt(parts[0])+'-'+parseInt(parts[1])+'-'+parseInt(parts[2]);
+    if(!logDates[k])logDates[k]=[];
+    logDates[k].push(log);
+  });
+
+  const today=new Date();
+  const firstDay=new Date(calYear,calMonth,1).getDay();
+  const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
+
+  const dayNames=['日','月','火','水','木','金','土'];
+  let html=dayNames.map((d,i)=>`<div class="cal-day-header" style="${i===0?'color:#e06060':i===6?'color:#6090e0':''}">${d}</div>`).join('');
+
+  // 空白
+  for(let i=0;i<firstDay;i++) html+=`<div class="cal-day empty"></div>`;
+
+  for(let d=1;d<=daysInMonth;d++){
+    const key=calYear+'-'+(calMonth+1)+'-'+d;
+    const hasItem=!!itemDates[key];
+    const hasLog=!!logDates[key];
+    const isToday=today.getFullYear()===calYear&&today.getMonth()===calMonth&&today.getDate()===d;
+    const isSelected=calSelected===key;
+    const dow=new Date(calYear,calMonth,d).getDay();
+    const color=dow===0?'color:#e06060':dow===6?'color:#6090e0':'';
+    const cls=['cal-day',isToday?'today':'',isSelected?'selected':'',(hasItem||hasLog)?'has-data':''].filter(Boolean).join(' ');
+    const marks=(hasItem?'<span class="mark">📦</span>':'')+(hasLog?'<span class="mark">📝</span>':'');
+    html+=`<div class="${cls}" style="${color}" onclick="calSelect('${key}',${calYear},${calMonth+1},${d})">
+      <span class="day-num">${d}</span>
+      ${marks?`<div class="day-marks">${marks}</div>`:''}
+    </div>`;
+  }
+  grid.innerHTML=html;
+}
+
+function calSelect(key,y,m,d){
+  calSelected=key;
+  renderCalendar();
+
+  // その日の作品・ログを表示
+  const detail=document.getElementById('cal-detail');
+  const detailTitle=document.getElementById('cal-detail-title');
+  const detailContent=document.getElementById('cal-detail-content');
+
+  // 作品はid(timestamp)の日付で判定
+  const dayItems=items.filter(item=>{
+    const dt=new Date(item.id);
+    return dt.getFullYear()===y&&dt.getMonth()+1===m&&dt.getDate()===d;
+  });
+  // ログは日付フィールドで判定
+  const dayLogs=logs.filter(log=>{
+    if(!log.date)return false;
+    const parts=log.date.split('-');
+    return parseInt(parts[0])===y&&parseInt(parts[1])===m&&parseInt(parts[2])===d;
+  });
+
+  if(!dayItems.length&&!dayLogs.length){
+    detail.style.display='none';
+    return;
+  }
+
+  detailTitle.textContent=y+'年'+m+'月'+d+'日の記録';
+  let html='';
+
+  if(dayItems.length){
+    html+=`<div style="font-size:0.8rem;font-weight:900;color:var(--accent);margin-bottom:0.4rem;">📦 作品登録</div>`;
+    html+=dayItems.map(item=>`
+      <div class="log-mini-card" onclick="showItemDetail(${item.id})">
+        <div style="font-weight:900;">${item.name}</div>
+        <div style="font-size:0.8rem;color:var(--text-secondary);">¥${(item.price||0).toLocaleString()} / 在庫${item.stock||0}点</div>
+      </div>`).join('');
+  }
+
+  if(dayLogs.length){
+    html+=`<div style="font-size:0.8rem;font-weight:900;color:var(--accent);margin-top:0.5rem;margin-bottom:0.4rem;">📝 制作ログ</div>`;
+    html+=dayLogs.map(log=>`
+      <div class="log-mini-card" onclick="showLogForm(${log.id})">
+        <div style="font-weight:900;">${log.status==='完成'?'✅':log.status==='制作中'?'🔨':'⏸'} ${log.name}</div>
+        ${log.memo?`<div style="font-size:0.8rem;color:var(--text-secondary);">${log.memo.slice(0,40)}</div>`:''}
+      </div>`).join('');
+  }
+
+  detailContent.innerHTML=html;
+  detail.style.display='block';
+  detail.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function calPrev(){
+  calMonth--;if(calMonth<0){calMonth=11;calYear--;}
+  calSelected=null;
+  document.getElementById('cal-detail').style.display='none';
+  renderCalendar();
+}
+function calNext(){
+  calMonth++;if(calMonth>11){calMonth=0;calYear++;}
+  calSelected=null;
+  document.getElementById('cal-detail').style.display='none';
+  renderCalendar();
+}
+
+renderCalendar();
+
+</script>
+</body>
+</html>
