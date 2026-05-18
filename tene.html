@@ -197,6 +197,7 @@
         <div style="display:flex;flex-direction:column;gap:0.7rem;">
           <button class="btn btn-primary" onclick="showPage('page-price')">💴 価格計算</button>
           <button class="btn btn-primary" onclick="showPage('page-items')">📦 作品管理（ハブ）</button>
+          <button class="btn btn-primary" onclick="showPage('page-sales')">💰 売上管理</button>
         </div>
       </div>
       <div class="card">
@@ -378,6 +379,130 @@
     </div>
   </div>
 
+
+  <!-- 売上管理 -->
+  <div class="page" id="page-sales">
+    <div class="container">
+
+      <!-- サマリー -->
+      <div class="card" id="sales-summary">
+        <p class="card-title">今月の収支</p>
+        <div class="result-grid">
+          <div class="result-item main">
+            <p class="result-label">今月の売上手取り</p>
+            <p class="result-value" id="summary-income">¥0</p>
+          </div>
+          <div class="result-item">
+            <p class="result-label">売上合計</p>
+            <p class="result-value" id="summary-gross">¥0</p>
+          </div>
+          <div class="result-item">
+            <p class="result-label">手数料合計</p>
+            <p class="result-value" style="color:var(--red);" id="summary-fee">¥0</p>
+          </div>
+        </div>
+        <div style="margin-top:0.75rem;display:flex;gap:0.5rem;">
+          <button class="btn btn-secondary btn-sm" id="summary-prev" onclick="salesMonthPrev()">‹ 前月</button>
+          <span id="summary-month" style="flex:1;text-align:center;font-weight:900;font-size:0.95rem;padding:0.45rem 0;color:var(--text-primary);"></span>
+          <button class="btn btn-secondary btn-sm" id="summary-next" onclick="salesMonthNext()">次月 ›</button>
+        </div>
+      </div>
+
+      <!-- 売上記録一覧 -->
+      <button class="add-btn" onclick="showSalesForm(null)">＋ 売上を記録</button>
+      <div id="sales-list"></div>
+
+    </div>
+  </div>
+
+  <!-- 売上記録フォーム -->
+  <div class="page" id="page-sales-form">
+    <div class="container">
+      <div class="form-section">
+        <p class="form-section-title">作品</p>
+        <div class="input-group">
+          <label class="input-label">作品管理から選ぶ</label>
+          <select id="sales-item-select" onchange="fillSalesFromItem(this)">
+            <option value="">-- 作品を選択（任意）--</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label class="input-label">作品名（直接入力も可）</label>
+          <input type="text" id="sales-name" placeholder="例：桜のピアス" />
+        </div>
+      </div>
+
+      <div class="form-section">
+        <p class="form-section-title">販売情報</p>
+        <div class="input-group">
+          <label class="input-label">販売日</label>
+          <input type="date" id="sales-date" />
+        </div>
+        <div class="input-group">
+          <label class="input-label">販売プラットフォーム</label>
+          <div class="checkbox-group" id="sales-platform-group" style="margin-bottom:0.5rem;">
+            <button class="check-btn active" onclick="selectSalesPlatform(this,'minne',10)">minne</button>
+            <button class="check-btn" onclick="selectSalesPlatform(this,'Creema',11)">Creema</button>
+            <button class="check-btn" onclick="selectSalesPlatform(this,'メルカリ',10)">メルカリ</button>
+            <button class="check-btn" onclick="selectSalesPlatform(this,'ラクマ',6)">ラクマ</button>
+            <button class="check-btn" onclick="selectSalesPlatform(this,'ヤフオク',10)">ヤフオク</button>
+            <button class="check-btn" onclick="selectSalesPlatform(this,'BOOTH',5.6)">BOOTH</button>
+            <button class="check-btn" onclick="selectSalesPlatform(this,'BASE',3.5)">BASE</button>
+            <button class="check-btn" onclick="selectSalesPlatform(this,'iichi',8)">iichi</button>
+            <button class="check-btn" onclick="selectSalesPlatform(this,'イベント',0)">イベント</button>
+            <button class="check-btn" onclick="selectSalesPlatform(this,'その他',0)">その他</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <span style="font-size:0.9rem;font-weight:900;color:var(--text-secondary);white-space:nowrap;">手数料</span>
+            <input type="number" id="sales-fee-rate" value="10" min="0" max="100" step="0.1"
+              style="width:80px;padding:0.5rem 0.6rem;border:2px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text-primary);font-family:inherit;font-size:1rem;font-weight:900;text-align:center;"
+              oninput="calcSalesPreview()" />
+            <span style="font-size:0.9rem;font-weight:900;color:var(--text-secondary);">%</span>
+          </div>
+        </div>
+        <div class="input-row">
+          <div class="input-group">
+            <label class="input-label">販売単価</label>
+            <div class="input-wrap"><span class="prefix">¥</span>
+              <input type="number" id="sales-price" placeholder="0" min="0" oninput="calcSalesPreview()" />
+            </div>
+          </div>
+          <div class="input-group">
+            <label class="input-label">数量</label>
+            <input type="number" id="sales-qty" value="1" min="1" oninput="calcSalesPreview()" />
+          </div>
+        </div>
+      </div>
+
+      <!-- プレビュー -->
+      <div class="card" style="background:var(--accent-light);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;">
+          <span style="font-size:0.85rem;font-weight:900;color:var(--text-secondary);">売上合計</span>
+          <span style="font-size:1.1rem;font-weight:900;color:var(--text-primary);" id="sales-preview-gross">¥0</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;">
+          <span style="font-size:0.85rem;font-weight:900;color:var(--text-secondary);">手数料</span>
+          <span style="font-size:1.1rem;font-weight:900;color:var(--red);" id="sales-preview-fee">-¥0</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;border-top:2px solid var(--border);padding-top:0.4rem;">
+          <span style="font-size:0.95rem;font-weight:900;color:var(--text-secondary);">手取り</span>
+          <span style="font-size:1.4rem;font-weight:900;color:var(--accent-dark);" id="sales-preview-net">¥0</span>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <p class="form-section-title">メモ</p>
+        <input type="text" id="sales-memo" placeholder="例：イベント会場にて / まとめ買い" />
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="goBack()">キャンセル</button>
+        <button class="btn btn-primary" onclick="saveSales()">保存する</button>
+      </div>
+      <div style="margin-top:0.75rem;" id="sales-delete-btn-wrap"></div>
+    </div>
+  </div>
+
   <!-- SNS画像生成 -->
   <div class="page" id="page-sns">
     <div class="container">
@@ -541,6 +666,7 @@
     <button class="nav-btn active" id="nav-home" onclick="goHome()"><span class="nav-icon">🏠</span>ホーム</button>
     <button class="nav-btn" id="nav-price" onclick="showPage('page-price')"><span class="nav-icon">💴</span>価格計算</button>
     <button class="nav-btn" id="nav-items" onclick="showPage('page-items')"><span class="nav-icon">📦</span>作品管理</button>
+    <button class="nav-btn" id="nav-sales" onclick="showPage('page-sales')"><span class="nav-icon">💰</span>売上</button>
     <button class="nav-btn" id="nav-sns" onclick="showPage('page-sns')"><span class="nav-icon">📸</span>SNS画像</button>
     <button class="nav-btn" id="nav-log" onclick="showPage('page-log')"><span class="nav-icon">📝</span>制作ログ</button>
   </nav>
@@ -580,7 +706,7 @@ function updateHeader(pageId){
   const titles={
     'page-home':'手値','page-price':'価格計算','page-items':'作品管理',
     'page-item-detail':item?.name||'作品詳細','page-item-form':'作品を編集',
-    'page-log':'制作ログ','page-log-form':'制作ログ編集',
+    'page-log':'制作ログ','page-log-form':'制作ログ編集','page-sales':'売上管理','page-sales-form':'売上を記録',
   };
   // SNSページはヘッダーに編集中作品名を表示
   if(pageId==='page-sns'){
@@ -594,7 +720,7 @@ function updateHeader(pageId){
 
 function updateNav(pageId){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-  const map={'page-home':'nav-home','page-price':'nav-price','page-items':'nav-items','page-item-detail':'nav-items','page-item-form':'nav-items','page-sns':'nav-sns','page-log':'nav-log','page-log-form':'nav-log'};
+  const map={'page-home':'nav-home','page-price':'nav-price','page-items':'nav-items','page-item-detail':'nav-items','page-item-form':'nav-items','page-sns':'nav-sns','page-log':'nav-log','page-log-form':'nav-log','page-sales':'nav-sales','page-sales-form':'nav-sales'};
   if(map[pageId]) document.getElementById(map[pageId]).classList.add('active');
 }
 
@@ -791,7 +917,7 @@ function saveSnsToItem(){
 
 function showConfirm(type,id){
   deleteTarget={type,id};
-  const msg=type==='item'?'この作品を削除しますか？\n紐付いた制作ログも含め\nすべて削除されます。':'このログを削除しますか？\n元に戻せません。';
+  const msg=type==='item'?'この作品を削除しますか？\n紐付いた制作ログも含め\nすべて削除されます。':type==='sales'?'この売上記録を削除しますか？\n元に戻せません。':'このログを削除しますか？\n元に戻せません。';
   document.getElementById('confirm-msg').textContent=msg;
   document.getElementById('confirm-overlay').classList.add('visible');
 }
@@ -806,6 +932,11 @@ function confirmDelete(){
     saveItems();updateSeriesFilter();renderItems();
     pageHistory=pageHistory.filter(p=>p!=='page-item-form'&&p!=='page-item-detail');
     showPage('page-items');
+  } else if(deleteTarget.type==='sales'){
+    sales=sales.filter(s=>s.id!==deleteTarget.id);
+    saveSalesData();renderSales();
+    pageHistory=pageHistory.filter(p=>p!=='page-sales-form');
+    showPage('page-sales');
   } else if(deleteTarget.type==='log'){
     logs=logs.filter(l=>l.id!==deleteTarget.id);
     saveLogs();renderLogs();
