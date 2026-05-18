@@ -193,7 +193,7 @@
   <div class="page active" id="page-home">
     <div class="container">
       <div class="card" style="text-align:center;padding:1.5rem 1.2rem;">
-        <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:1.2rem;">作ることに集中できる、作家のための相棒アプリ</p>
+        <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:1.2rem;">クリエイター物販管理</p>
         <div style="display:flex;flex-direction:column;gap:0.7rem;">
           <button class="btn btn-primary" onclick="showPage('page-price')">💴 価格計算</button>
           <button class="btn btn-primary" onclick="showPage('page-items')">📦 作品管理（ハブ）</button>
@@ -206,9 +206,10 @@
           <button onclick="calNext()" style="background:var(--accent-light);border:2px solid var(--border);border-radius:8px;padding:0.35rem 0.8rem;font-size:1rem;font-weight:900;cursor:pointer;color:var(--accent-dark);">›</button>
         </div>
         <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;"></div>
-        <div style="display:flex;gap:0.75rem;margin-top:0.75rem;font-size:0.75rem;font-weight:700;color:var(--text-secondary);">
-          <span>📦 作品登録</span><span>📝 制作ログ</span>
+        <div style="display:flex;gap:0.75rem;margin-top:0.75rem;font-size:0.75rem;font-weight:700;color:var(--text-secondary);flex-wrap:wrap;">
+          <span>📦 作品登録</span><span>📝 制作ログ</span><span>📅 イベント</span><span>🎌 祝日</span>
         </div>
+        <button onclick="showAddEvent()" style="margin-top:0.6rem;width:100%;background:var(--accent-light);border:2px solid var(--border);border-radius:8px;padding:0.5rem;font-family:inherit;font-size:0.85rem;font-weight:900;color:var(--accent-dark);cursor:pointer;">＋ イベント・予定を追加</button>
       </div>
       <div class="card" id="cal-detail" style="display:none;">
         <p class="card-title" id="cal-detail-title">選択した日</p>
@@ -229,13 +230,25 @@
       </div>
       <div class="card">
         <p class="card-title">販売プラットフォーム</p>
-        <div class="platform-group">
-          <button class="platform-btn active" id="plt-minne" onclick="setPlatform(this,0.10)"><span>minne</span><span class="platform-fee">手数料 10%</span></button>
-          <button class="platform-btn" id="plt-creema" onclick="setPlatform(this,0.11)"><span>Creema</span><span class="platform-fee">手数料 11%</span></button>
-          <button class="platform-btn" id="plt-other" onclick="setPlatform(this,parseFloat(document.getElementById('other-fee').value)/100||0.05)">
-            <span>その他</span>
-            <span class="fee-edit">手数料<input type="number" id="other-fee" value="5" min="0" max="100" step="0.1" style="width:52px;padding:0.25rem 0.4rem;font-size:0.85rem;border:2px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text-primary);font-weight:900;text-align:center;" onclick="event.stopPropagation()" oninput="if(document.getElementById('plt-other').classList.contains('active')){feeRate=parseFloat(this.value)/100||0.05;calc()}" />%</span>
-          </button>
+        <div style="margin-bottom:0.7rem;">
+          <p style="font-size:0.8rem;font-weight:900;color:var(--text-secondary);margin-bottom:0.5rem;">よく使うプラットフォームを選ぶか、手数料を直接入力</p>
+          <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:0.6rem;" id="plt-presets">
+            <button class="check-btn active" onclick="setPltPreset(this,10)">minne 10%</button>
+            <button class="check-btn" onclick="setPltPreset(this,11)">Creema 11%</button>
+            <button class="check-btn" onclick="setPltPreset(this,10)">メルカリ 10%</button>
+            <button class="check-btn" onclick="setPltPreset(this,6)">ラクマ 6%</button>
+            <button class="check-btn" onclick="setPltPreset(this,10)">ヤフオク 10%</button>
+            <button class="check-btn" onclick="setPltPreset(this,5.6)">BOOTH 5.6%</button>
+            <button class="check-btn" onclick="setPltPreset(this,3.5)">BASE 3.5%</button>
+            <button class="check-btn" onclick="setPltPreset(this,8)">iichi 8%</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <span style="font-size:0.9rem;font-weight:900;color:var(--text-secondary);white-space:nowrap;">販売手数料</span>
+            <input type="number" id="fee-input" value="10" min="0" max="100" step="0.1"
+              style="width:80px;padding:0.5rem 0.6rem;border:2px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text-primary);font-family:inherit;font-size:1rem;font-weight:900;text-align:center;"
+              oninput="feeRate=parseFloat(this.value)/100||0;document.querySelectorAll('#plt-presets .check-btn').forEach(b=>b.classList.remove('active'));calc()" />
+            <span style="font-size:0.9rem;font-weight:900;color:var(--text-secondary);">%</span>
+          </div>
         </div>
       </div>
       <div class="card">
@@ -346,8 +359,14 @@
             <button class="check-btn" onclick="togglePlatform(this)">minne</button>
             <button class="check-btn" onclick="togglePlatform(this)">Creema</button>
             <button class="check-btn" onclick="togglePlatform(this)">メルカリ</button>
+            <button class="check-btn" onclick="togglePlatform(this)">ラクマ</button>
+            <button class="check-btn" onclick="togglePlatform(this)">ヤフオク</button>
+            <button class="check-btn" onclick="togglePlatform(this)">BOOTH</button>
             <button class="check-btn" onclick="togglePlatform(this)">BASE</button>
             <button class="check-btn" onclick="togglePlatform(this)">iichi</button>
+            <button class="check-btn" onclick="togglePlatform(this)">フリマアプリ</button>
+            <button class="check-btn" onclick="togglePlatform(this)">ネットショップ</button>
+            <button class="check-btn" onclick="togglePlatform(this)">イベント販売</button>
             <button class="check-btn" onclick="togglePlatform(this)">非公開</button>
           </div>
           <input type="text" id="form-platform-custom" placeholder="その他の出品先を入力（任意）" />
@@ -490,6 +509,34 @@
     </div>
   </div>
 
+  <!-- イベント追加モーダル -->
+  <div class="confirm-overlay" id="event-overlay">
+    <div class="confirm-box" style="max-width:360px;">
+      <p style="font-size:1rem;font-weight:900;color:var(--text-primary);margin-bottom:1rem;">📅 イベント・予定を追加</p>
+      <div style="display:flex;flex-direction:column;gap:0.6rem;text-align:left;">
+        <div><label style="font-size:0.85rem;font-weight:900;color:var(--text-secondary);">タイトル</label>
+          <input type="text" id="event-title" placeholder="例：○○マルシェ出店" style="width:100%;margin-top:0.3rem;padding:0.65rem 0.75rem;border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;font-weight:700;background:var(--bg);color:var(--text-primary);outline:none;" /></div>
+        <div><label style="font-size:0.85rem;font-weight:900;color:var(--text-secondary);">日付</label>
+          <input type="date" id="event-date" style="width:100%;margin-top:0.3rem;padding:0.65rem 0.75rem;border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;font-weight:700;background:var(--bg);color:var(--text-primary);outline:none;" /></div>
+        <div><label style="font-size:0.85rem;font-weight:900;color:var(--text-secondary);">種類</label>
+          <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.3rem;" id="event-type-group">
+            <button class="check-btn active" onclick="selectEventType(this,'イベント出店')">🏪 イベント出店</button>
+            <button class="check-btn" onclick="selectEventType(this,'締め切り')">⏰ 締め切り</button>
+            <button class="check-btn" onclick="selectEventType(this,'発送')">📦 発送</button>
+            <button class="check-btn" onclick="selectEventType(this,'仕入れ')">🛒 仕入れ</button>
+            <button class="check-btn" onclick="selectEventType(this,'その他')">📌 その他</button>
+          </div>
+        </div>
+        <div><label style="font-size:0.85rem;font-weight:900;color:var(--text-secondary);">メモ（任意）</label>
+          <input type="text" id="event-memo" placeholder="場所・持ち物など" style="width:100%;margin-top:0.3rem;padding:0.65rem 0.75rem;border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;font-weight:700;background:var(--bg);color:var(--text-primary);outline:none;" /></div>
+      </div>
+      <div class="btn-row" style="margin-top:1rem;">
+        <button class="btn btn-secondary" onclick="closeEventOverlay()">キャンセル</button>
+        <button class="btn btn-primary" onclick="saveEvent()">保存</button>
+      </div>
+    </div>
+  </div>
+
   <nav class="bottom-nav">
     <button class="nav-btn active" id="nav-home" onclick="goHome()"><span class="nav-icon">🏠</span>ホーム</button>
     <button class="nav-btn" id="nav-price" onclick="showPage('page-price')"><span class="nav-icon">💴</span>価格計算</button>
@@ -560,13 +607,19 @@ function switchTab(tab){
 
 // ===== 価格計算 =====
 const ratings={rare:3,skill:3,repro:3};
-let feeRate=0.10;
+let feeRate=0.10; // 初期値10%（minne）
 const coeffMap=[1.5,2.0,2.5,3.0,4.0];
 function buildStars(cid,key){
   const el=document.getElementById(cid);el.innerHTML='';
   for(let i=1;i<=5;i++){const s=document.createElement('span');s.className='star'+(i<=ratings[key]?' active':'');s.textContent='★';s.onclick=()=>{ratings[key]=i;buildStars(cid,key);calc();};el.appendChild(s);}
 }
-function setPlatform(btn,rate){document.querySelectorAll('.platform-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');feeRate=rate;calc();}
+function setPltPreset(btn,pct){
+  document.querySelectorAll('#plt-presets .check-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  feeRate=pct/100;
+  document.getElementById('fee-input').value=pct;
+  calc();
+}
 function calc(){
   const mat=parseFloat(document.getElementById('material').value)||0;
   const ship=parseFloat(document.getElementById('shipping').value)||0;
@@ -1145,6 +1198,75 @@ function saveLog(){
 }
 renderLogs();
 
+
+// ===== 祝日データ（日本）=====
+const HOLIDAYS = {
+  '2026-1-1':'元日','2026-1-12':'成人の日','2026-2-11':'建国記念の日',
+  '2026-2-23':'天皇誕生日','2026-3-20':'春分の日','2026-4-29':'昭和の日',
+  '2026-5-3':'憲法記念日','2026-5-4':'みどりの日','2026-5-5':'こどもの日',
+  '2026-7-20':'海の日','2026-8-11':'山の日','2026-9-21':'敬老の日',
+  '2026-9-23':'秋分の日','2026-10-12':'スポーツの日','2026-11-3':'文化の日',
+  '2026-11-23':'勤労感謝の日',
+  '2025-1-1':'元日','2025-1-13':'成人の日','2025-2-11':'建国記念の日',
+  '2025-2-23':'天皇誕生日','2025-3-20':'春分の日','2025-4-29':'昭和の日',
+  '2025-5-3':'憲法記念日','2025-5-4':'みどりの日','2025-5-5':'こどもの日',
+  '2025-7-21':'海の日','2025-8-11':'山の日','2025-9-15':'敬老の日',
+  '2025-9-23':'秋分の日','2025-10-13':'スポーツの日','2025-11-3':'文化の日',
+  '2025-11-23':'勤労感謝の日',
+};
+
+// ===== イベント管理 =====
+let events = JSON.parse(localStorage.getItem('tene-events')||'[]');
+let currentEventType = 'イベント出店';
+
+function saveEvents(){ localStorage.setItem('tene-events', JSON.stringify(events)); }
+
+function showAddEvent(){
+  const today = new Date();
+  document.getElementById('event-date').value = today.toISOString().split('T')[0];
+  document.getElementById('event-title').value = '';
+  document.getElementById('event-memo').value = '';
+  selectEventType(document.querySelector('#event-type-group .check-btn'), 'イベント出店');
+  document.getElementById('event-overlay').classList.add('visible');
+}
+
+function closeEventOverlay(){
+  document.getElementById('event-overlay').classList.remove('visible');
+}
+
+function selectEventType(btn, type){
+  document.querySelectorAll('#event-type-group .check-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  currentEventType = type;
+}
+
+function saveEvent(){
+  const title = document.getElementById('event-title').value.trim();
+  const date = document.getElementById('event-date').value;
+  if(!title || !date){ alert('タイトルと日付を入力してください'); return; }
+  events.push({
+    id: Date.now(),
+    title,
+    date,
+    type: currentEventType,
+    memo: document.getElementById('event-memo').value.trim()
+  });
+  saveEvents();
+  closeEventOverlay();
+  renderCalendar();
+}
+
+function deleteEvent(id){
+  events = events.filter(e=>e.id!==id);
+  saveEvents();
+  renderCalendar();
+  // 詳細を再表示
+  if(calSelected){
+    const parts = calSelected.split('-');
+    calSelect(calSelected, parseInt(parts[0]), parseInt(parts[1]), parseInt(parts[2]));
+  }
+}
+
 // ===== カレンダー =====
 let calYear=new Date().getFullYear(), calMonth=new Date().getMonth();
 let calSelected=null;
@@ -1156,8 +1278,8 @@ function renderCalendar(){
 
   title.textContent=calYear+'年'+(calMonth+1)+'月';
 
-  // イベントデータ収集
-  const itemDates={}, logDates={};
+  // データ収集
+  const itemDates={}, logDates={}, eventDates={};
   items.forEach(item=>{
     if(!item.id)return;
     const d=new Date(item.id);
@@ -1167,11 +1289,17 @@ function renderCalendar(){
   });
   logs.forEach(log=>{
     if(!log.date)return;
-    const key=log.date.replace(/-0*/g,m=>m.replace(/-0/,'-'));
     const parts=log.date.split('-');
     const k=parseInt(parts[0])+'-'+parseInt(parts[1])+'-'+parseInt(parts[2]);
     if(!logDates[k])logDates[k]=[];
     logDates[k].push(log);
+  });
+  events.forEach(ev=>{
+    if(!ev.date)return;
+    const parts=ev.date.split('-');
+    const k=parseInt(parts[0])+'-'+parseInt(parts[1])+'-'+parseInt(parts[2]);
+    if(!eventDates[k])eventDates[k]=[];
+    eventDates[k].push(ev);
   });
 
   const today=new Date();
@@ -1181,20 +1309,24 @@ function renderCalendar(){
   const dayNames=['日','月','火','水','木','金','土'];
   let html=dayNames.map((d,i)=>`<div class="cal-day-header" style="${i===0?'color:#e06060':i===6?'color:#6090e0':''}">${d}</div>`).join('');
 
-  // 空白
   for(let i=0;i<firstDay;i++) html+=`<div class="cal-day empty"></div>`;
 
   for(let d=1;d<=daysInMonth;d++){
     const key=calYear+'-'+(calMonth+1)+'-'+d;
+    const holidayKey=calYear+'-'+(calMonth+1)+'-'+d;
+    const holiday=HOLIDAYS[holidayKey];
     const hasItem=!!itemDates[key];
     const hasLog=!!logDates[key];
+    const hasEvent=!!eventDates[key];
     const isToday=today.getFullYear()===calYear&&today.getMonth()===calMonth&&today.getDate()===d;
     const isSelected=calSelected===key;
     const dow=new Date(calYear,calMonth,d).getDay();
-    const color=dow===0?'color:#e06060':dow===6?'color:#6090e0':'';
-    const cls=['cal-day',isToday?'today':'',isSelected?'selected':'',(hasItem||hasLog)?'has-data':''].filter(Boolean).join(' ');
-    const marks=(hasItem?'<span class="mark">📦</span>':'')+(hasLog?'<span class="mark">📝</span>':'');
-    html+=`<div class="${cls}" style="${color}" onclick="calSelect('${key}',${calYear},${calMonth+1},${d})">
+    const isHoliday=!!holiday;
+    const color=(dow===0||isHoliday)?'color:#e06060':dow===6?'color:#6090e0':'';
+    const cls=['cal-day',isToday?'today':'',isSelected?'selected':'',(hasItem||hasLog||hasEvent)?'has-data':''].filter(Boolean).join(' ');
+    const marks=(hasItem?'<span class="mark">📦</span>':'')+(hasLog?'<span class="mark">📝</span>':'')+(hasEvent?'<span class="mark">📅</span>':'')+(isHoliday?'<span class="mark">🎌</span>':'');
+    const holidayTitle=holiday?`title="${holiday}"`:'';
+    html+=`<div class="${cls}" style="${color}" ${holidayTitle} onclick="calSelect('${key}',${calYear},${calMonth+1},${d})">
       <span class="day-num">${d}</span>
       ${marks?`<div class="day-marks">${marks}</div>`:''}
     </div>`;
@@ -1223,7 +1355,13 @@ function calSelect(key,y,m,d){
     return parseInt(parts[0])===y&&parseInt(parts[1])===m&&parseInt(parts[2])===d;
   });
 
-  if(!dayItems.length&&!dayLogs.length){
+  const dayEventsCheck=events.filter(ev=>{
+    if(!ev.date)return false;
+    const parts=ev.date.split('-');
+    return parseInt(parts[0])===y&&parseInt(parts[1])===m&&parseInt(parts[2])===d;
+  });
+  const holidayCheck=HOLIDAYS[y+'-'+m+'-'+d];
+  if(!dayItems.length&&!dayLogs.length&&!dayEventsCheck.length&&!holidayCheck){
     detail.style.display='none';
     return;
   }
@@ -1246,6 +1384,29 @@ function calSelect(key,y,m,d){
       <div class="log-mini-card" onclick="showLogForm(${log.id})">
         <div style="font-weight:900;">${log.status==='完成'?'✅':log.status==='制作中'?'🔨':'⏸'} ${log.name}</div>
         ${log.memo?`<div style="font-size:0.8rem;color:var(--text-secondary);">${log.memo.slice(0,40)}</div>`:''}
+      </div>`).join('');
+  }
+
+  // イベント
+  const dayEvents=events.filter(ev=>{
+    if(!ev.date)return false;
+    const parts=ev.date.split('-');
+    return parseInt(parts[0])===y&&parseInt(parts[1])===m&&parseInt(parts[2])===d;
+  });
+  // 祝日
+  const holidayName=HOLIDAYS[y+'-'+m+'-'+d];
+  if(holidayName){
+    html+=`<div style="font-size:0.8rem;font-weight:900;color:#e06060;margin-top:0.5rem;margin-bottom:0.3rem;">🎌 祝日：${holidayName}</div>`;
+  }
+  if(dayEvents.length){
+    html+=`<div style="font-size:0.8rem;font-weight:900;color:var(--accent);margin-top:0.5rem;margin-bottom:0.4rem;">📅 イベント・予定</div>`;
+    html+=dayEvents.map(ev=>`
+      <div class="log-mini-card" style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <div style="font-weight:900;">${ev.type} ${ev.title}</div>
+          ${ev.memo?`<div style="font-size:0.8rem;color:var(--text-secondary);">${ev.memo}</div>`:''}
+        </div>
+        <button onclick="deleteEvent(${ev.id})" style="background:var(--red);color:#fff;border:none;border-radius:6px;padding:0.2rem 0.5rem;font-size:0.75rem;cursor:pointer;font-weight:900;flex-shrink:0;margin-left:0.5rem;">削除</button>
       </div>`).join('');
   }
 
