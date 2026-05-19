@@ -1035,8 +1035,8 @@ function confirmDelete(){
     pageHistory=pageHistory.filter(p=>p!=='page-item-form'&&p!=='page-item-detail');
     showPage('page-items');
   } else if(deleteTarget.type==='material'){
-    materials=materials.filter(m=>m.id!==deleteTarget.id);
-    saveMaterialsData();renderMaterials();
+    stockMaterials=stockMaterials.filter(m=>m.id!==deleteTarget.id);
+    saveStockMaterials();renderStockMaterials();
     pageHistory=pageHistory.filter(p=>p!=='page-material-form');
     showPage('page-materials');
   } else if(deleteTarget.type==='sales'){
@@ -1578,7 +1578,113 @@ function saveSales(){
 }
 
 renderSales();
-const HOLIDAYS = {
+
+// ===== 資材管理 =====
+let stockMaterials=JSON.parse(localStorage.getItem('tene-stock-materials')||'[]');
+let editingMatId=null;
+let currentMatCat='金具・パーツ';
+
+function saveStockMaterials(){localStorage.setItem('tene-stock-materials',JSON.stringify(stockMaterials));}
+
+function selectMatCat(btn){
+  document.querySelectorAll('#mat-category-group .check-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  currentMatCat=btn.textContent;
+}
+
+function renderStockMaterials(){
+  const list=document.getElementById('materials-list');
+  const warn=document.getElementById('materials-warning');
+  if(!list)return;
+
+  const lowStock=stockMaterials.filter(m=>m.threshold>0&&m.stock<=m.threshold);
+  if(lowStock.length){
+    warn.innerHTML=`<div style="background:#ffe0e0;border:2px solid var(--red);border-radius:10px;padding:0.75rem 1rem;margin-bottom:0.5rem;">
+      <div style="font-size:0.85rem;font-weight:900;color:var(--red);margin-bottom:0.4rem;">⚠️ 在庫が少ない資材</div>
+      ${lowStock.map(m=>`<div style="font-size:0.9rem;font-weight:700;color:var(--red);">・${m.name}（残り${m.stock}${m.unit}）</div>`).join('')}
+    </div>`;
+  } else { if(warn)warn.innerHTML=''; }
+
+  if(!stockMaterials.length){list.innerHTML='<div class="empty-state">資材がまだありません。<br>「＋ 資材を追加」から登録しましょう！</div>';return;}
+
+  const cats=[...new Set(stockMaterials.map(m=>m.category))];
+  list.innerHTML=cats.map(cat=>{
+    const catMats=stockMaterials.filter(m=>m.category===cat);
+    return `<div style="margin-bottom:0.5rem;">
+      <div style="font-size:0.78rem;font-weight:900;color:var(--accent);letter-spacing:0.1em;margin-bottom:0.4rem;padding:0 0.2rem;">${cat}</div>
+      ${catMats.map(m=>{
+        const isLow=m.threshold>0&&m.stock<=m.threshold;
+        return `<div class="item-card" style="${isLow?'border-color:var(--red);':''}" onclick="showMaterialForm(${m.id})">
+          <div class="item-header">
+            <div><div class="item-name">${m.name}</div>${m.supplier?`<div class="item-series">🏪 ${m.supplier}</div>`:''}</div>
+            <div style="text-align:right;">
+              <div style="font-size:1.1rem;font-weight:900;color:${isLow?'var(--red)':'var(--accent)'};">${m.stock}${m.unit}</div>
+              ${m.price?`<div style="font-size:0.78rem;color:var(--text-secondary);">単価 ¥${m.price.toLocaleString()}</div>`:''}
+            </div>
+          </div>
+          ${m.memo?`<div style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.3rem;">${m.memo}</div>`:''}
+          <div style="display:flex;gap:0.5rem;align-items:center;margin-top:0.5rem;">
+            <button onclick="event.stopPropagation();adjustMatStock(${m.id},-1)" style="background:var(--accent-light);border:2px solid var(--border);border-radius:6px;padding:0.3rem 0.7rem;font-weight:900;font-size:1rem;cursor:pointer;color:var(--accent-dark);">−</button>
+            <span style="flex:1;text-align:center;font-size:0.85rem;font-weight:700;color:var(--text-secondary);">在庫調整</span>
+            <button onclick="event.stopPropagation();adjustMatStock(${m.id},1)" style="background:var(--accent-light);border:2px solid var(--border);border-radius:6px;padding:0.3rem 0.7rem;font-weight:900;font-size:1rem;cursor:pointer;color:var(--accent-dark);">＋</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }).join('');
+}
+
+function adjustMatStock(id,delta){
+  const m=stockMaterials.find(m=>m.id===id);
+  if(!m)return;
+  m.stock=Math.max(0,m.stock+delta);
+  saveStockMaterials();renderStockMaterials();
+}
+
+function showMaterialForm(id){
+  editingMatId=id;
+  const m=id?stockMaterials.find(m=>m.id===id):null;
+  currentMatCat=m?.category||'金具・パーツ';
+  document.getElementById('mat-name').value=m?.name||'';
+  document.getElementById('mat-supplier').value=m?.supplier||'';
+  document.getElementById('mat-memo').value=m?.memo||'';
+  document.getElementById('mat-stock').value=m?.stock||'';
+  document.getElementById('mat-unit').value=m?.unit||'個';
+  document.getElementById('mat-price').value=m?.price||'';
+  document.getElementById('mat-threshold').value=m?.threshold||'';
+  document.querySelectorAll('#mat-category-group .check-btn').forEach(b=>{
+    b.classList.toggle('active',b.textContent===currentMatCat);
+  });
+  document.getElementById('mat-delete-btn-wrap').innerHTML=id?
+    `<button class="btn btn-danger" style="width:100%" onclick="showConfirm('material',${id})">🗑️ この資材を削除</button>`:'';
+  showPage('page-material-form');
+}
+
+function saveMaterial(){
+  const name=document.getElementById('mat-name').value.trim();
+  if(!name){alert('資材名を入力してください');return;}
+  const data={
+    name,category:currentMatCat,
+    supplier:document.getElementById('mat-supplier').value.trim(),
+    memo:document.getElementById('mat-memo').value.trim(),
+    stock:parseFloat(document.getElementById('mat-stock').value)||0,
+    unit:document.getElementById('mat-unit').value,
+    price:parseFloat(document.getElementById('mat-price').value)||0,
+    threshold:parseFloat(document.getElementById('mat-threshold').value)||0,
+  };
+  if(editingMatId){
+    const idx=stockMaterials.findIndex(m=>m.id===editingMatId);
+    stockMaterials[idx]={...stockMaterials[idx],...data};
+  } else {
+    data.id=Date.now();
+    stockMaterials.push(data);
+  }
+  saveStockMaterials();renderStockMaterials();goBack();
+}
+
+renderStockMaterials();
+
+
   '2026-1-1':'元日','2026-1-12':'成人の日','2026-2-11':'建国記念の日',
   '2026-2-23':'天皇誕生日','2026-3-20':'春分の日','2026-4-29':'昭和の日',
   '2026-5-3':'憲法記念日','2026-5-4':'みどりの日','2026-5-5':'こどもの日',
