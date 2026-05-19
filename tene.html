@@ -700,6 +700,8 @@ function showPage(pageId){
   if(pageHistory[pageHistory.length-1]!==pageId) pageHistory.push(pageId);
   updateHeader(pageId);updateNav(pageId);
   window.scrollTo(0,0);
+  // 作品一覧に戻ったら編集中をリセット
+  if(pageId==='page-items') currentItemId=null;
   if(pageId==='page-sns') setTimeout(()=>initEditor(),100);
 }
 function goBack(){
@@ -1367,8 +1369,143 @@ function saveLog(){
 }
 renderLogs();
 
+// ===== 売上管理 =====
+let sales=JSON.parse(localStorage.getItem('tene-sales')||'[]');
+let editingSalesId=null;
+let salesYear=new Date().getFullYear();
+let salesMonth=new Date().getMonth()+1;
+let currentSalesPlatform='minne';
+let currentSalesFeeRate=10;
 
-// ===== 祝日データ（日本）=====
+function saveSalesData(){localStorage.setItem('tene-sales',JSON.stringify(sales));}
+
+function salesMonthPrev(){
+  salesMonth--;if(salesMonth<1){salesMonth=12;salesYear--;}
+  renderSales();
+}
+function salesMonthNext(){
+  salesMonth++;if(salesMonth>12){salesMonth=1;salesYear++;}
+  renderSales();
+}
+
+function renderSales(){
+  const smEl=document.getElementById('summary-month');
+  if(!smEl)return;
+  smEl.textContent=salesYear+'年'+salesMonth+'月';
+  const monthly=sales.filter(s=>{
+    const d=new Date(s.date);
+    return d.getFullYear()===salesYear&&d.getMonth()+1===salesMonth;
+  });
+  const gross=monthly.reduce((a,s)=>a+(s.price*s.qty),0);
+  const fee=monthly.reduce((a,s)=>a+Math.round(s.price*s.qty*(s.feeRate||0)/100),0);
+  const net=gross-fee;
+  document.getElementById('summary-gross').textContent='¥'+gross.toLocaleString();
+  document.getElementById('summary-fee').textContent='¥'+fee.toLocaleString();
+  document.getElementById('summary-income').textContent='¥'+net.toLocaleString();
+
+  const list=document.getElementById('sales-list');
+  if(!list)return;
+  const sorted=[...sales].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  if(!sorted.length){list.innerHTML='<div class="empty-state">売上記録がまだありません。</div>';return;}
+  list.innerHTML=sorted.map(s=>{
+    const g=s.price*s.qty;
+    const f=Math.round(g*(s.feeRate||0)/100);
+    const n=g-f;
+    return `<div class="item-card" onclick="showSalesForm(${s.id})">
+      <div class="item-header">
+        <div><div class="item-name">${s.name}</div><div class="item-series">${s.date} / ${s.platform||''}</div></div>
+        <div style="text-align:right;"><div style="font-size:1rem;font-weight:900;color:var(--accent);">¥${n.toLocaleString()}</div><div style="font-size:0.78rem;color:var(--text-secondary);">×${s.qty} 手取り</div></div>
+      </div>
+      <div class="item-meta">
+        <span class="item-badge">単価 ¥${s.price.toLocaleString()}</span>
+        <span class="item-badge">数量 ${s.qty}</span>
+        <span class="item-badge">手数料 ${s.feeRate||0}%</span>
+        ${s.memo?`<span class="item-badge platform">${s.memo}</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function showSalesForm(id){
+  editingSalesId=id;
+  const s=id?sales.find(s=>s.id===id):null;
+  const sel=document.getElementById('sales-item-select');
+  if(sel) sel.innerHTML='<option value="">-- 作品を選択（任意）--</option>'+
+    items.map(i=>`<option value="${i.id}">${i.name}</option>`).join('');
+  document.getElementById('sales-name').value=s?.name||'';
+  document.getElementById('sales-date').value=s?.date||new Date().toISOString().split('T')[0];
+  document.getElementById('sales-price').value=s?.price||'';
+  document.getElementById('sales-qty').value=s?.qty||1;
+  document.getElementById('sales-fee-rate').value=s?.feeRate||10;
+  document.getElementById('sales-memo').value=s?.memo||'';
+  document.querySelectorAll('#sales-platform-group .check-btn').forEach(b=>{
+    b.classList.toggle('active',b.textContent===(s?.platform||'minne'));
+  });
+  currentSalesPlatform=s?.platform||'minne';
+  currentSalesFeeRate=s?.feeRate||10;
+  document.getElementById('sales-delete-btn-wrap').innerHTML=id?
+    `<button class="btn btn-danger" style="width:100%" onclick="showConfirm('sales',${id})">🗑️ この記録を削除</button>`:'';
+  calcSalesPreview();
+  showPage('page-sales-form');
+}
+
+function fillSalesFromItem(sel){
+  const item=items.find(i=>i.id===parseInt(sel.value));
+  if(!item)return;
+  document.getElementById('sales-name').value=item.name;
+  document.getElementById('sales-price').value=item.price||'';
+  calcSalesPreview();
+}
+
+function selectSalesPlatform(btn,platform,fee){
+  document.querySelectorAll('#sales-platform-group .check-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  currentSalesPlatform=platform;
+  currentSalesFeeRate=fee;
+  document.getElementById('sales-fee-rate').value=fee;
+  calcSalesPreview();
+}
+
+function calcSalesPreview(){
+  const price=parseFloat(document.getElementById('sales-price')?.value)||0;
+  const qty=parseInt(document.getElementById('sales-qty')?.value)||1;
+  const feeRate=parseFloat(document.getElementById('sales-fee-rate')?.value)||0;
+  const gross=price*qty;
+  const fee=Math.round(gross*feeRate/100);
+  const net=gross-fee;
+  const pg=document.getElementById('sales-preview-gross');
+  const pf=document.getElementById('sales-preview-fee');
+  const pn=document.getElementById('sales-preview-net');
+  if(pg)pg.textContent='¥'+gross.toLocaleString();
+  if(pf)pf.textContent='-¥'+fee.toLocaleString();
+  if(pn)pn.textContent='¥'+net.toLocaleString();
+}
+
+function saveSales(){
+  const name=document.getElementById('sales-name').value.trim();
+  const date=document.getElementById('sales-date').value;
+  const price=parseFloat(document.getElementById('sales-price').value)||0;
+  if(!name||!date||!price){alert('作品名・日付・価格を入力してください');return;}
+  const data={
+    name,date,
+    platform:currentSalesPlatform,
+    price,
+    qty:parseInt(document.getElementById('sales-qty').value)||1,
+    feeRate:parseFloat(document.getElementById('sales-fee-rate').value)||0,
+    memo:document.getElementById('sales-memo').value.trim(),
+  };
+  if(editingSalesId){
+    const idx=sales.findIndex(s=>s.id===editingSalesId);
+    sales[idx]={...sales[idx],...data};
+  } else {
+    data.id=Date.now();
+    sales.unshift(data);
+  }
+  saveSalesData();renderSales();renderCalendar();
+  goBack();
+}
+
+renderSales();
 const HOLIDAYS = {
   '2026-1-1':'元日','2026-1-12':'成人の日','2026-2-11':'建国記念の日',
   '2026-2-23':'天皇誕生日','2026-3-20':'春分の日','2026-4-29':'昭和の日',
