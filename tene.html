@@ -767,8 +767,8 @@ function showPage(pageId){
   if(pageHistory[pageHistory.length-1]!==pageId) pageHistory.push(pageId);
   updateHeader(pageId);updateNav(pageId);
   window.scrollTo(0,0);
-  // 作品一覧に戻ったら編集中をリセット
-  if(pageId==='page-items') currentItemId=null;
+  if(pageId==='page-items'){currentItemId=null;renderItems();}
+  if(pageId==='page-log'){renderLogs();}
   if(pageId==='page-sns') setTimeout(()=>initEditor(),100);
 }
 function goBack(){
@@ -980,7 +980,9 @@ function saveItem(){
   } else {
     data.id=Date.now();data.photos=[];data.snsImages=[];items.unshift(data);currentItemId=data.id;
   }
-  saveItems();updateSeriesFilter();renderItems();showItemDetail(currentItemId);
+  saveItems();updateSeriesFilter();
+  currentItemId=null;
+  renderItems();showPage('page-items');
 }
 
 function addItemPhotos(input){
