@@ -233,23 +233,31 @@
       <div class="card">
         <p class="card-title">販売プラットフォーム</p>
         <div style="margin-bottom:0.7rem;">
-          <p style="font-size:0.8rem;font-weight:900;color:var(--text-secondary);margin-bottom:0.5rem;">よく使うプラットフォームを選ぶか、手数料を直接入力</p>
-          <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:0.6rem;" id="plt-presets">
-            <button class="check-btn active" onclick="setPltPreset(this,10)">minne 10%</button>
-            <button class="check-btn" onclick="setPltPreset(this,11)">Creema 11%</button>
-            <button class="check-btn" onclick="setPltPreset(this,10)">メルカリ 10%</button>
-            <button class="check-btn" onclick="setPltPreset(this,6)">ラクマ 6%</button>
-            <button class="check-btn" onclick="setPltPreset(this,10)">ヤフオク 10%</button>
-            <button class="check-btn" onclick="setPltPreset(this,5.6)">BOOTH 5.6%</button>
-            <button class="check-btn" onclick="setPltPreset(this,3.5)">BASE 3.5%</button>
-            <button class="check-btn" onclick="setPltPreset(this,8)">iichi 8%</button>
+          <!-- 参考手数料一覧（折りたたみ）-->
+          <button onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';this.textContent=this.textContent.startsWith('▼')?'▶ プラットフォーム手数料の参考':'▼ プラットフォーム手数料の参考'"
+            style="width:100%;background:var(--accent-light);border:2px solid var(--border);border-radius:8px;padding:0.5rem 0.75rem;font-family:inherit;font-size:0.85rem;font-weight:900;color:var(--accent-dark);cursor:pointer;text-align:left;margin-bottom:0.5rem;">
+            ▶ プラットフォーム手数料の参考
+          </button>
+          <div style="display:none;background:var(--bg);border:2px solid var(--border);border-radius:8px;padding:0.75rem;margin-bottom:0.6rem;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.3rem 0.75rem;">
+              <div style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);">minne</div><div style="font-size:0.85rem;font-weight:900;color:var(--text-primary);">10%</div>
+              <div style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);">Creema</div><div style="font-size:0.85rem;font-weight:900;color:var(--text-primary);">11%</div>
+              <div style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);">メルカリ</div><div style="font-size:0.85rem;font-weight:900;color:var(--text-primary);">10%</div>
+              <div style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);">ラクマ</div><div style="font-size:0.85rem;font-weight:900;color:var(--text-primary);">6%</div>
+              <div style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);">ヤフオク</div><div style="font-size:0.85rem;font-weight:900;color:var(--text-primary);">10%</div>
+              <div style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);">BOOTH</div><div style="font-size:0.85rem;font-weight:900;color:var(--text-primary);">5.6%</div>
+              <div style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);">BASE</div><div style="font-size:0.85rem;font-weight:900;color:var(--text-primary);">3.5%</div>
+              <div style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);">iichi</div><div style="font-size:0.85rem;font-weight:900;color:var(--text-primary);">8%</div>
+              <div style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);">イベント</div><div style="font-size:0.85rem;font-weight:900;color:var(--text-primary);">0%</div>
+            </div>
           </div>
-          <div style="display:flex;align-items:center;gap:0.5rem;">
-            <span style="font-size:0.9rem;font-weight:900;color:var(--text-secondary);white-space:nowrap;">販売手数料</span>
+          <!-- 手動入力 -->
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <span style="font-size:1rem;font-weight:900;color:var(--text-secondary);white-space:nowrap;">販売手数料</span>
             <input type="number" id="fee-input" value="10" min="0" max="100" step="0.1"
-              style="width:80px;padding:0.5rem 0.6rem;border:2px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text-primary);font-family:inherit;font-size:1rem;font-weight:900;text-align:center;"
-              oninput="feeRate=parseFloat(this.value)/100||0;document.querySelectorAll('#plt-presets .check-btn').forEach(b=>b.classList.remove('active'));calc()" />
-            <span style="font-size:0.9rem;font-weight:900;color:var(--text-secondary);">%</span>
+              style="width:90px;padding:0.6rem 0.75rem;border:2px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text-primary);font-family:inherit;font-size:1.1rem;font-weight:900;text-align:center;"
+              oninput="feeRate=parseFloat(this.value)/100||0;calc()" />
+            <span style="font-size:1rem;font-weight:900;color:var(--text-secondary);">%</span>
           </div>
         </div>
       </div>
