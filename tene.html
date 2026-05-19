@@ -865,9 +865,77 @@ function adjustPrice(delta){
   calc();
 }
 function transferToItem(){
-  const price=document.getElementById('price').textContent.replace('¥','').replace(',','');
-  showItemForm(null);
-  if(price&&price!=='—') setTimeout(()=>{document.getElementById('form-price').value=price;},50);
+  const priceText=document.getElementById('price').textContent.replace('¥','').replace(/,/g,'');
+  const price=parseInt(priceText)||0;
+
+  if(currentItemId&&items.find(i=>i.id===currentItemId)){
+    // 作品詳細から来た場合：既存作品に価格を反映するか確認
+    const item=items.find(i=>i.id===currentItemId);
+    const choice=confirm('「'+item.name+'」の価格を ¥'+price.toLocaleString()+' に更新しますか？\n\nOK → この作品の価格を更新\nキャンセル → 新規作品として登録');
+    if(choice){
+      // 既存作品の価格を更新
+      const idx=items.findIndex(i=>i.id===currentItemId);
+      items[idx].price=price;
+      saveItems();renderItems();
+      showItemDetail(currentItemId);
+      return;
+    }
+  }
+
+  // 新規作品として登録 or 既存から選ぶ
+  const mode=items.length>0?confirm('新規作品として登録しますか？\n\nOK → 新規作品として登録\nキャンセル → 既存作品の一覧から選ぶ'):true;
+  if(mode){
+    // 新規作品フォームへ（価格だけ引き継ぎ）
+    currentItemId=null;
+    showItemForm(null);
+    setTimeout(()=>{document.getElementById('form-price').value=price;},50);
+  } else {
+    // 既存作品一覧を表示して選ばせる
+    showPriceApplyModal(price);
+  }
+}
+
+function showPriceApplyModal(price){
+  const overlay=document.getElementById('confirm-overlay');
+  const msg=document.getElementById('confirm-msg');
+  const box=document.querySelector('.confirm-box');
+  box.innerHTML=`
+    <p style="font-size:1rem;font-weight:900;margin-bottom:0.75rem;">どの作品に適用しますか？<br><span style="font-size:0.85rem;color:var(--accent);">¥${price.toLocaleString()}</span></p>
+    <div style="max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:0.4rem;margin-bottom:1rem;">
+      ${items.map(i=>`<button onclick="applyPriceToItem(${i.id},${price})" style="padding:0.65rem 1rem;background:var(--accent-light);border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;font-weight:900;color:var(--accent-dark);cursor:pointer;text-align:left;">${i.name}<span style="float:right;color:var(--text-secondary);font-size:0.8rem;">現在 ¥${(i.price||0).toLocaleString()}</span></button>`).join('')}
+    </div>
+    <button class="btn btn-secondary" style="width:100%;" onclick="closeConfirm()">キャンセル</button>
+  `;
+  overlay.classList.add('visible');
+}
+
+function applyPriceToItem(id,price){
+  const idx=items.findIndex(i=>i.id===id);
+  if(idx>=0){items[idx].price=price;saveItems();renderItems();}
+  closeConfirm();
+  showItemDetail(id);
+}
+
+function goToPriceFromItem(){
+  const item=items.find(i=>i.id===currentItemId);
+  showPage('page-price');
+  if(item){
+    setTimeout(()=>{
+      // 出品先の最初のプラットフォームに合わせて手数料をセット
+      const platformFees={'minne':10,'Creema':11,'メルカリ':10,'ラクマ':6,'ヤフオク':10,'BOOTH':5.6,'BASE':3.5,'iichi':8};
+      const firstPlt=(item.platforms||[]).find(p=>platformFees[p]);
+      if(firstPlt){
+        const fee=platformFees[firstPlt];
+        feeRate=fee/100;
+        document.getElementById('fee-input').value=fee;
+        // プリセットボタンのアクティブ状態を更新
+        document.querySelectorAll('#plt-presets .check-btn').forEach(b=>{
+          b.classList.toggle('active',b.textContent.startsWith(firstPlt));
+        });
+        calc();
+      }
+    },100);
+  }
 }
 buildStars('stars-rare','rare');buildStars('stars-skill','skill');buildStars('stars-repro','repro');calc();
 
