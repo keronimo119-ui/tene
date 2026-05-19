@@ -270,6 +270,19 @@
           <div class="result-item profit"><p class="result-label">利益額</p><p class="result-value" id="profit">¥—</p></div>
         </div>
         <p class="fee-note" id="fee-note">手数料（10%）を差し引いた金額</p>
+        <div style="margin-top:0.75rem;padding:0.75rem;background:var(--bg);border-radius:10px;border:2px solid var(--border);">
+          <p style="font-size:0.8rem;font-weight:900;color:var(--text-secondary);margin-bottom:0.5rem;">端数調整（推奨価格を微調整）</p>
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <button onclick="adjustPrice(-100)" style="background:var(--accent-light);border:2px solid var(--border);border-radius:8px;padding:0.4rem 0.7rem;font-weight:900;font-size:0.9rem;cursor:pointer;color:var(--accent-dark);">-100</button>
+            <button onclick="adjustPrice(-10)" style="background:var(--accent-light);border:2px solid var(--border);border-radius:8px;padding:0.4rem 0.7rem;font-weight:900;font-size:0.9rem;cursor:pointer;color:var(--accent-dark);">-10</button>
+            <input type="number" id="price-adjust" value="0" step="1"
+              style="flex:1;padding:0.5rem;border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;font-weight:900;text-align:center;background:var(--surface);color:var(--text-primary);"
+              oninput="calc()" placeholder="0" />
+            <button onclick="adjustPrice(10)" style="background:var(--accent-light);border:2px solid var(--border);border-radius:8px;padding:0.4rem 0.7rem;font-weight:900;font-size:0.9rem;cursor:pointer;color:var(--accent-dark);">+10</button>
+            <button onclick="adjustPrice(100)" style="background:var(--accent-light);border:2px solid var(--border);border-radius:8px;padding:0.4rem 0.7rem;font-weight:900;font-size:0.9rem;cursor:pointer;color:var(--accent-dark);">+100</button>
+          </div>
+          <button onclick="document.getElementById('price-adjust').value=0;calc()" style="margin-top:0.4rem;width:100%;background:transparent;border:1px solid var(--border);border-radius:6px;padding:0.3rem;font-family:inherit;font-size:0.78rem;font-weight:900;color:var(--text-secondary);cursor:pointer;">リセット</button>
+        </div>
         <button class="btn btn-secondary" style="width:100%;margin-top:0.75rem;" onclick="transferToItem()">📦 この価格で作品登録へ</button>
       </div>
     </div>
@@ -734,7 +747,21 @@ function switchTab(tab){
 // ===== 価格計算 =====
 const ratings={rare:3,skill:3,repro:3};
 let feeRate=0.10; // 初期値10%（minne）
-const coeffMap=[1.5,2.0,2.5,3.0,4.0];
+// 0.25単位の係数マップ（平均★を0.25刻みで補間）
+function getCoeff(avg){
+  // ★1=1.5, ★2=2.0, ★3=2.5, ★4=3.0, ★5=4.0
+  // 間は線形補間
+  const stops=[[1,1.5],[2,2.0],[3,2.5],[4,3.0],[5,4.0]];
+  for(let i=0;i<stops.length-1;i++){
+    const [x0,y0]=stops[i],[x1,y1]=stops[i+1];
+    if(avg>=x0&&avg<=x1){
+      const t=(avg-x0)/(x1-x0);
+      const raw=y0+t*(y1-y0);
+      return Math.round(raw*4)/4; // 0.25単位
+    }
+  }
+  return avg<=1?1.5:4.0;
+}
 function buildStars(cid,key){
   const el=document.getElementById(cid);el.innerHTML='';
   for(let i=1;i<=5;i++){const s=document.createElement('span');s.className='star'+(i<=ratings[key]?' active':'');s.textContent='★';s.onclick=()=>{ratings[key]=i;buildStars(cid,key);calc();};el.appendChild(s);}
@@ -751,16 +778,22 @@ function calc(){
   const ship=parseFloat(document.getElementById('shipping').value)||0;
   const base=mat+ship;
   const avg=(ratings.rare+ratings.skill+ratings.repro)/3;
-  const idx=Math.round(avg)-1;
-  const coeff=coeffMap[Math.max(0,Math.min(4,idx))];
-  const price=Math.round(base*coeff/(1-feeRate));
+  const coeff=getCoeff(avg);
+  const basePrice=Math.round(base*coeff/(1-feeRate));
+  const adjust=parseInt(document.getElementById('price-adjust')?.value)||0;
+  const price=Math.max(0,basePrice+adjust);
   const profit=price-Math.round(price*feeRate)-base;
   document.getElementById('cost').textContent='¥'+base.toLocaleString();
   document.getElementById('price').textContent='¥'+price.toLocaleString();
   document.getElementById('profit').textContent='¥'+profit.toLocaleString();
-  document.getElementById('coeff-label').textContent='× '+coeff.toFixed(1);
+  document.getElementById('coeff-label').textContent='× '+coeff.toFixed(2);
   document.getElementById('coeff-bar').style.width=((coeff-1.5)/2.5*100)+'%';
   document.getElementById('fee-note').textContent='手数料（'+Math.round(feeRate*100)+'%）を差し引いた金額';
+}
+function adjustPrice(delta){
+  const el=document.getElementById('price-adjust');
+  el.value=(parseInt(el.value)||0)+delta;
+  calc();
 }
 function transferToItem(){
   const price=document.getElementById('price').textContent.replace('¥','').replace(',','');
@@ -1117,6 +1150,7 @@ function renderLayerList(){
           <input type="range" min="-180" max="180" step="1" value="${l.rotation}"
             onclick="event.stopPropagation()"
             oninput="event.stopPropagation();layers[${i}].rotation=parseFloat(this.value);renderEditor()" />
+          <button onclick="event.stopPropagation();layers[${i}].rotation=0;renderEditor();renderLayerList();" style="background:var(--accent-light);border:1px solid var(--border);border-radius:5px;padding:0.2rem 0.4rem;font-size:0.72rem;font-weight:900;cursor:pointer;color:var(--accent-dark);white-space:nowrap;flex-shrink:0;">0°</button>
         </div>
         <div class="layer-slider-row">透明度
           <input type="range" min="0.1" max="1" step="0.05" value="${l.opacity}"
@@ -1125,7 +1159,7 @@ function renderLayerList(){
         </div>
         <div style="margin-top:0.3rem;">
           <label style="font-size:0.78rem;font-weight:900;color:var(--text-secondary);display:flex;align-items:center;gap:0.4rem;">
-            <input type="checkbox" ${l.cropEnabled?'checked':''} onclick="event.stopPropagation()" onchange="layers[${i}].cropEnabled=this.checked;renderEditor()" />
+            <input type="checkbox" ${l.cropEnabled?'checked':''} onclick="event.stopPropagation()" onchange="layers[${i}].cropEnabled=this.checked;renderEditor();renderLayerList()" />
             枠スケール ON
           </label>
           ${l.cropEnabled?`
@@ -1165,6 +1199,10 @@ function resetEditor(){
   if(!confirm('編集中の画像をすべてリセットしますか？'))return;
   layers=[];activeLayer=-1;
   document.getElementById('layer-section').style.display='none';
+  document.getElementById('sns-name').value='';
+  document.getElementById('sns-price').value='';
+  document.getElementById('sns-comment').value='';
+  document.getElementById('sns-photo').value='';
   renderEditor();renderLayerList();
 }
 
