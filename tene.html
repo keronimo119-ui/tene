@@ -198,6 +198,7 @@
           <button class="btn btn-primary" onclick="showPage('page-price')">💴 価格計算</button>
           <button class="btn btn-primary" onclick="showPage('page-items')">📦 作品管理（ハブ）</button>
           <button class="btn btn-primary" onclick="showPage('page-sales')">💰 売上管理</button>
+          <button class="btn btn-primary" onclick="showPage('page-materials')">🧵 資材管理</button>
         </div>
       </div>
       <div class="card">
@@ -392,6 +393,71 @@
     </div>
   </div>
 
+
+
+  <!-- 資材管理 -->
+  <div class="page" id="page-materials">
+    <div class="container">
+      <button class="add-btn" onclick="showMaterialForm(null)">＋ 資材を追加</button>
+      <!-- 在庫警告 -->
+      <div id="materials-warning"></div>
+      <!-- 資材一覧 -->
+      <div id="materials-list"></div>
+    </div>
+  </div>
+
+  <!-- 資材フォーム -->
+  <div class="page" id="page-material-form">
+    <div class="container">
+      <div class="form-section">
+        <p class="form-section-title">資材情報</p>
+        <div class="input-group"><label class="input-label">資材名</label>
+          <input type="text" id="mat-name" placeholder="例：シルバーリング金具" /></div>
+        <div class="input-group"><label class="input-label">カテゴリ</label>
+          <div class="checkbox-group" id="mat-category-group">
+            <button class="check-btn active" onclick="selectMatCat(this)">金具・パーツ</button>
+            <button class="check-btn" onclick="selectMatCat(this)">糸・布</button>
+            <button class="check-btn" onclick="selectMatCat(this)">ビーズ・石</button>
+            <button class="check-btn" onclick="selectMatCat(this)">革・レザー</button>
+            <button class="check-btn" onclick="selectMatCat(this)">木材</button>
+            <button class="check-btn" onclick="selectMatCat(this)">接着剤・工具</button>
+            <button class="check-btn" onclick="selectMatCat(this)">梱包材</button>
+            <button class="check-btn" onclick="selectMatCat(this)">その他</button>
+          </div>
+        </div>
+        <div class="input-group"><label class="input-label">発注先・購入先（任意）</label>
+          <input type="text" id="mat-supplier" placeholder="例：○○ネット / 浅草橋○○" /></div>
+        <div class="input-group"><label class="input-label">メモ（品番・URLなど）</label>
+          <input type="text" id="mat-memo" placeholder="例：品番AB-123 / amazon.co.jp/..." /></div>
+      </div>
+      <div class="form-section">
+        <p class="form-section-title">在庫・価格</p>
+        <div class="input-row">
+          <div class="input-group"><label class="input-label">現在の在庫数</label>
+            <input type="number" id="mat-stock" placeholder="0" min="0" /></div>
+          <div class="input-group"><label class="input-label">単位</label>
+            <select id="mat-unit">
+              <option>個</option><option>枚</option><option>本</option><option>m</option>
+              <option>cm</option><option>g</option><option>kg</option><option>袋</option><option>セット</option>
+            </select>
+          </div>
+        </div>
+        <div class="input-row">
+          <div class="input-group"><label class="input-label">単価</label>
+            <div class="input-wrap"><span class="prefix">¥</span>
+              <input type="number" id="mat-price" placeholder="0" min="0" /></div>
+          </div>
+          <div class="input-group"><label class="input-label">発注点（この数以下で警告）</label>
+            <input type="number" id="mat-threshold" placeholder="5" min="0" /></div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="goBack()">キャンセル</button>
+        <button class="btn btn-primary" onclick="saveMaterial()">保存する</button>
+      </div>
+      <div style="margin-top:0.75rem;" id="mat-delete-btn-wrap"></div>
+    </div>
+  </div>
 
   <!-- 売上管理 -->
   <div class="page" id="page-sales">
@@ -680,6 +746,7 @@
     <button class="nav-btn" id="nav-price" onclick="showPage('page-price')"><span class="nav-icon">💴</span>価格計算</button>
     <button class="nav-btn" id="nav-items" onclick="showPage('page-items')"><span class="nav-icon">📦</span>作品管理</button>
     <button class="nav-btn" id="nav-sales" onclick="showPage('page-sales')"><span class="nav-icon">💰</span>売上</button>
+    <button class="nav-btn" id="nav-materials" onclick="showPage('page-materials')"><span class="nav-icon">🧵</span>資材</button>
     <button class="nav-btn" id="nav-sns" onclick="showPage('page-sns')"><span class="nav-icon">📸</span>SNS画像</button>
     <button class="nav-btn" id="nav-log" onclick="showPage('page-log')"><span class="nav-icon">📝</span>制作ログ</button>
   </nav>
@@ -721,7 +788,7 @@ function updateHeader(pageId){
   const titles={
     'page-home':'手値','page-price':'価格計算','page-items':'作品管理',
     'page-item-detail':item?.name||'作品詳細','page-item-form':'作品を編集',
-    'page-log':'制作ログ','page-log-form':'制作ログ編集','page-sales':'売上管理','page-sales-form':'売上を記録',
+    'page-log':'制作ログ','page-log-form':'制作ログ編集','page-sales':'売上管理','page-sales-form':'売上を記録','page-materials':'資材管理','page-material-form':'資材を編集',
   };
   // SNSページはヘッダーに編集中作品名を表示
   if(pageId==='page-sns'){
@@ -735,7 +802,7 @@ function updateHeader(pageId){
 
 function updateNav(pageId){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-  const map={'page-home':'nav-home','page-price':'nav-price','page-items':'nav-items','page-item-detail':'nav-items','page-item-form':'nav-items','page-sns':'nav-sns','page-log':'nav-log','page-log-form':'nav-log','page-sales':'nav-sales','page-sales-form':'nav-sales'};
+  const map={'page-home':'nav-home','page-price':'nav-price','page-items':'nav-items','page-item-detail':'nav-items','page-item-form':'nav-items','page-sns':'nav-sns','page-log':'nav-log','page-log-form':'nav-log','page-sales':'nav-sales','page-sales-form':'nav-sales','page-materials':'nav-materials','page-material-form':'nav-materials'};
   if(map[pageId]) document.getElementById(map[pageId]).classList.add('active');
 }
 
@@ -952,7 +1019,7 @@ function saveSnsToItem(){
 
 function showConfirm(type,id){
   deleteTarget={type,id};
-  const msg=type==='item'?'この作品を削除しますか？\n紐付いた制作ログも含め\nすべて削除されます。':type==='sales'?'この売上記録を削除しますか？\n元に戻せません。':'このログを削除しますか？\n元に戻せません。';
+  const msg=type==='item'?'この作品を削除しますか？\n紐付いた制作ログも含め\nすべて削除されます。':type==='sales'?'この売上記録を削除しますか？\n元に戻せません。':type==='material'?'この資材を削除しますか？\n元に戻せません。':'このログを削除しますか？\n元に戻せません。';
   document.getElementById('confirm-msg').textContent=msg;
   document.getElementById('confirm-overlay').classList.add('visible');
 }
@@ -967,6 +1034,11 @@ function confirmDelete(){
     saveItems();updateSeriesFilter();renderItems();
     pageHistory=pageHistory.filter(p=>p!=='page-item-form'&&p!=='page-item-detail');
     showPage('page-items');
+  } else if(deleteTarget.type==='material'){
+    materials=materials.filter(m=>m.id!==deleteTarget.id);
+    saveMaterialsData();renderMaterials();
+    pageHistory=pageHistory.filter(p=>p!=='page-material-form');
+    showPage('page-materials');
   } else if(deleteTarget.type==='sales'){
     sales=sales.filter(s=>s.id!==deleteTarget.id);
     saveSalesData();renderSales();
