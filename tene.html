@@ -282,15 +282,13 @@
         <div style="margin-top:0.75rem;padding:0.75rem;background:var(--bg);border-radius:10px;border:2px solid var(--border);">
           <p style="font-size:0.8rem;font-weight:900;color:var(--text-secondary);margin-bottom:0.5rem;">端数調整（推奨価格を微調整）</p>
           <div style="display:flex;align-items:center;gap:0.5rem;">
-            <button onclick="adjustPrice(-100)" style="background:var(--accent-light);border:2px solid var(--border);border-radius:8px;padding:0.4rem 0.7rem;font-weight:900;font-size:0.9rem;cursor:pointer;color:var(--accent-dark);">-100</button>
-            <button onclick="adjustPrice(-10)" style="background:var(--accent-light);border:2px solid var(--border);border-radius:8px;padding:0.4rem 0.7rem;font-weight:900;font-size:0.9rem;cursor:pointer;color:var(--accent-dark);">-10</button>
+            <span style="font-size:0.85rem;font-weight:900;color:var(--text-secondary);white-space:nowrap;">±</span>
             <input type="number" id="price-adjust" value="0" step="1"
-              style="flex:1;padding:0.5rem;border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;font-weight:900;text-align:center;background:var(--surface);color:var(--text-primary);"
+              style="flex:1;padding:0.6rem;border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:1rem;font-weight:900;text-align:center;background:var(--surface);color:var(--text-primary);"
               oninput="calc()" placeholder="0" />
-            <button onclick="adjustPrice(10)" style="background:var(--accent-light);border:2px solid var(--border);border-radius:8px;padding:0.4rem 0.7rem;font-weight:900;font-size:0.9rem;cursor:pointer;color:var(--accent-dark);">+10</button>
-            <button onclick="adjustPrice(100)" style="background:var(--accent-light);border:2px solid var(--border);border-radius:8px;padding:0.4rem 0.7rem;font-weight:900;font-size:0.9rem;cursor:pointer;color:var(--accent-dark);">+100</button>
+            <span style="font-size:0.85rem;font-weight:900;color:var(--text-secondary);white-space:nowrap;">円</span>
+            <button onclick="document.getElementById('price-adjust').value=0;calc()" style="background:var(--accent-light);border:2px solid var(--border);border-radius:8px;padding:0.6rem 0.9rem;font-family:inherit;font-size:0.85rem;font-weight:900;color:var(--accent-dark);cursor:pointer;white-space:nowrap;">リセット</button>
           </div>
-          <button onclick="document.getElementById('price-adjust').value=0;calc()" style="margin-top:0.4rem;width:100%;background:transparent;border:1px solid var(--border);border-radius:6px;padding:0.3rem;font-family:inherit;font-size:0.78rem;font-weight:900;color:var(--text-secondary);cursor:pointer;">リセット</button>
         </div>
         <button class="btn btn-secondary" style="width:100%;margin-top:0.75rem;" onclick="transferToItem()">📦 この価格で作品登録へ</button>
       </div>
