@@ -179,6 +179,7 @@
 <body>
 
   <div id="ad-banner"><div class="ad-label">広　告</div></div>
+  <div id="storage-warning-banner" style="display:none;"></div>
 
   <header>
     <div class="header-left">
@@ -1059,25 +1060,18 @@ function saveItem(){
   renderItems();showPage('page-items');
 }
 
-function addItemPhotos(input){
+async function addItemPhotos(input){
   const item=items.find(i=>i.id===currentItemId);if(!item)return;
   if(!item.photos)item.photos=[];
-  const files=Array.from(input.files);let loaded=0;
-  files.forEach(file=>{
-    const reader=new FileReader();
-    reader.onload=e=>{
-      item.photos.push(e.target.result);loaded++;
-      if(loaded===files.length){
-        saveItems();
-        // 発信タブのみ更新、タブは切り替えない
-        const photos=item.photos||[];
-        document.getElementById('detail-photos').innerHTML=photos.length?`<div class="photo-preview">${photos.map((src,i)=>`<div class="photo-thumb"><img src="${src}" /><button class="del-btn" onclick="deleteItemPhoto(${currentItemId},${i})">✕</button></div>`).join('')}</div>`:'<div style="color:var(--text-secondary);font-size:0.85rem;padding:0.5rem 0;">まだ写真がありません</div>';
-        // ファイル入力をリセット
-        document.getElementById('item-photo-input').value='';
-      }
-    };
-    reader.readAsDataURL(file);
-  });
+  const files=Array.from(input.files);
+  for(const file of files){
+    const compressed=await compressImage(file,0.8,1200,1200);
+    item.photos.push(compressed);
+  }
+  saveItems();checkStorageWarning();
+  const photos=item.photos||[];
+  document.getElementById('detail-photos').innerHTML=photos.length?`<div class="photo-preview">${photos.map((src,i)=>`<div class="photo-thumb"><img src="${src}" /><button class="del-btn" onclick="deleteItemPhoto(${currentItemId},${i})">✕</button></div>`).join('')}</div>`:'<div style="color:var(--text-secondary);font-size:0.85rem;padding:0.5rem 0;">まだ写真がありません</div>';
+  document.getElementById('item-photo-input').value='';
 }
 
 function deleteItemPhoto(id,idx){const item=items.find(i=>i.id===id);if(!item)return;item.photos.splice(idx,1);saveItems();showItemDetail(id);switchTab('publish');}
@@ -1113,6 +1107,7 @@ function confirmDelete(){
   } else if(deleteTarget.type==='material'){
     stockMaterials=stockMaterials.filter(m=>m.id!==deleteTarget.id);
     saveStockMaterials();renderStockMaterials();
+checkStorageWarning();
     pageHistory=pageHistory.filter(p=>p!=='page-material-form');
     showPage('page-materials');
   } else if(deleteTarget.type==='sales'){
@@ -1497,8 +1492,12 @@ function renderMaterials(){
   updateLogTotal();
 }
 function updateLogTotal(){document.getElementById('log-total').textContent='¥'+logMaterials.reduce((s,m)=>s+(m.cost||0),0).toLocaleString();}
-function addLogPhotos(input){
-  Array.from(input.files).forEach(file=>{const reader=new FileReader();reader.onload=e=>{logPhotos.push(e.target.result);renderLogPhotos();};reader.readAsDataURL(file);});
+async function addLogPhotos(input){
+  for(const file of Array.from(input.files)){
+    const compressed=await compressImage(file,0.8,1200,1200);
+    logPhotos.push(compressed);
+  }
+  renderLogPhotos();
   input.value='';
 }
 function renderLogPhotos(){
@@ -1655,6 +1654,150 @@ function saveSales(){
 
 renderSales();
 
+
+// ===== ストレージ管理 =====
+const STORAGE_WARN_RATIO = 0.8; // 80%で警告
+const STORAGE_MAX_BYTES = 5 * 1024 * 1024; // 5MB想定
+
+function getStorageUsed(){
+  let total=0;
+  for(let key in localStorage){
+    if(localStorage.hasOwnProperty(key)){
+      total += (localStorage[key].length + key.length) * 2;
+    }
+  }
+  return total;
+}
+
+function checkStorageWarning(){
+  const used=getStorageUsed();
+  const ratio=used/STORAGE_MAX_BYTES;
+  const banner=document.getElementById('storage-warning-banner');
+  if(!banner)return;
+  if(ratio>=STORAGE_WARN_RATIO){
+    const pct=Math.round(ratio*100);
+    banner.style.display='block';
+    banner.innerHTML=`<div style="background:#ffe0e0;border-bottom:2px solid var(--red);padding:0.6rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:0.5rem;">
+      <span style="font-size:0.82rem;font-weight:900;color:var(--red);">⚠️ ストレージ使用量 ${pct}%　写真をエクスポートしてください</span>
+      <button onclick="showStorageManager()" style="background:var(--red);color:#fff;border:none;border-radius:6px;padding:0.3rem 0.7rem;font-size:0.8rem;font-weight:900;cursor:pointer;white-space:nowrap;">管理</button>
+    </div>`;
+  } else {
+    banner.style.display='none';
+  }
+}
+
+// 写真を圧縮してbase64に変換
+function compressImage(file, quality=0.8, maxW=1200, maxH=1200){
+  return new Promise(resolve=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const img=new Image();
+      img.onload=()=>{
+        let w=img.width, h=img.height;
+        if(w>maxW||h>maxH){
+          const ratio=Math.min(maxW/w,maxH/h);
+          w=Math.round(w*ratio);h=Math.round(h*ratio);
+        }
+        const canvas=document.createElement('canvas');
+        canvas.width=w;canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        resolve(canvas.toDataURL('image/jpeg',quality));
+      };
+      img.src=e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// ストレージ管理画面
+function showStorageManager(){
+  const used=getStorageUsed();
+  const pct=Math.min(100,Math.round(used/STORAGE_MAX_BYTES*100));
+
+  // 全写真を収集
+  const allPhotos=[];
+  items.forEach(item=>{
+    (item.photos||[]).forEach((src,i)=>{
+      allPhotos.push({type:'item',id:item.id,idx:i,name:item.name,src});
+    });
+    (item.snsImages||[]).forEach((src,i)=>{
+      allPhotos.push({type:'sns',id:item.id,idx:i,name:item.name+'_SNS',src});
+    });
+  });
+  logs.forEach(log=>{
+    (log.photos||[]).forEach((src,i)=>{
+      allPhotos.push({type:'log',id:log.id,idx:i,name:log.name+'_ログ',src});
+    });
+  });
+
+  const overlay=document.getElementById('confirm-overlay');
+  const box=document.querySelector('.confirm-box');
+  box.innerHTML=`
+    <p style="font-size:1rem;font-weight:900;margin-bottom:0.75rem;">📦 ストレージ管理</p>
+    <div style="background:var(--bg);border-radius:8px;padding:0.6rem;margin-bottom:0.75rem;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:0.3rem;">
+        <span style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);">使用量</span>
+        <span style="font-size:0.85rem;font-weight:900;color:var(--text-primary);">${pct}%（約${Math.round(used/1024)}KB）</span>
+      </div>
+      <div style="height:8px;background:var(--border);border-radius:99px;overflow:hidden;">
+        <div style="height:100%;width:${pct}%;background:${pct>=80?'var(--red)':'var(--accent)'};border-radius:99px;"></div>
+      </div>
+    </div>
+    <p style="font-size:0.82rem;font-weight:700;color:var(--text-secondary);margin-bottom:0.75rem;">写真 ${allPhotos.length}枚が保存されています。<br>エクスポートすると端末のダウンロードフォルダに保存され、アプリ内から削除して容量を空けられます。</p>
+    <div style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:0.75rem;">
+      <button onclick="exportAllPhotos()" style="padding:0.75rem;background:var(--accent);color:#000;border:none;border-radius:8px;font-family:inherit;font-size:0.95rem;font-weight:900;cursor:pointer;">⬇️ 全写真をエクスポート（${allPhotos.length}枚）</button>
+      <button onclick="deleteExportedPhotos()" style="padding:0.75rem;background:#ffe0e0;color:var(--red);border:2px solid var(--red);border-radius:8px;font-family:inherit;font-size:0.95rem;font-weight:900;cursor:pointer;">🗑️ エクスポート済み写真を削除して容量を空ける</button>
+    </div>
+    <button class="btn btn-secondary" style="width:100%;" onclick="closeConfirm()">閉じる</button>
+  `;
+  overlay.classList.add('visible');
+}
+
+function exportAllPhotos(){
+  const allPhotos=[];
+  items.forEach(item=>{
+    (item.photos||[]).forEach((src,i)=>allPhotos.push({name:item.name+'_写真'+(i+1),src}));
+    (item.snsImages||[]).forEach((src,i)=>allPhotos.push({name:item.name+'_SNS'+(i+1),src}));
+  });
+  logs.forEach(log=>{
+    (log.photos||[]).forEach((src,i)=>allPhotos.push({name:log.name+'_ログ'+(i+1),src}));
+  });
+
+  if(!allPhotos.length){alert('保存されている写真がありません');return;}
+
+  // 1枚ずつダウンロード
+  allPhotos.forEach((p,i)=>{
+    setTimeout(()=>{
+      const a=document.createElement('a');
+      a.href=p.src;
+      a.download=`tene_${p.name.replace(/[^\w぀-鿿]/g,'_')}_${i+1}.jpg`;
+      a.click();
+    },i*300);
+  });
+
+  // エクスポート済みフラグを記録
+  localStorage.setItem('tene-exported-at',new Date().toISOString());
+  alert(allPhotos.length+'枚のエクスポートを開始しました。\nダウンロードフォルダを確認してください。');
+}
+
+function deleteExportedPhotos(){
+  const exportedAt=localStorage.getItem('tene-exported-at');
+  if(!exportedAt){
+    alert('先に「全写真をエクスポート」を実行してください');
+    return;
+  }
+  if(!confirm('エクスポート済みの全写真をアプリから削除しますか？\n（端末のダウンロードフォルダには残ります）')){return;}
+
+  // 全写真を削除
+  items.forEach(item=>{item.photos=[];item.snsImages=[];});
+  logs.forEach(log=>{log.photos=[];});
+  saveItems();saveLogs();
+  localStorage.removeItem('tene-exported-at');
+  closeConfirm();
+  checkStorageWarning();
+  alert('写真を削除しました。容量が空きました！');
+}
+
 // ===== 資材管理 =====
 let stockMaterials=JSON.parse(localStorage.getItem('tene-stock-materials')||'[]');
 let editingMatId=null;
@@ -1715,6 +1858,7 @@ function adjustMatStock(id,delta){
   if(!m)return;
   m.stock=Math.max(0,m.stock+delta);
   saveStockMaterials();renderStockMaterials();
+checkStorageWarning();
 }
 
 function showMaterialForm(id){
@@ -1755,10 +1899,12 @@ function saveMaterial(){
     data.id=Date.now();
     stockMaterials.push(data);
   }
-  saveStockMaterials();renderStockMaterials();goBack();
+  saveStockMaterials();renderStockMaterials();
+checkStorageWarning();goBack();
 }
 
 renderStockMaterials();
+checkStorageWarning();
 
 // ===== 祝日データ（日本）=====
 const HOLIDAYS = {
