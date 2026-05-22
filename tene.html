@@ -440,7 +440,10 @@
     </div>
     <div class="form-section">
       <p class="form-section-title">販売情報</p>
-      <div class="input-group"><label class="input-label">販売日</label><input type="date" id="sales-date" /></div>
+      <div class="input-group"><label class="input-label">販売日</label>
+        <input type="date" id="sales-date" oninput="updateSalesDateDisplay(this.value)" />
+        <div id="sales-date-display" style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);margin-top:0.3rem;"></div>
+      </div>
       <div class="input-group">
         <label class="input-label">販売プラットフォーム</label>
         <div class="checkbox-group" id="sales-platform-group" style="margin-bottom:0.5rem;">
@@ -1194,6 +1197,7 @@ function showSalesForm(id){
   if(sel)sel.innerHTML='<option value="">-- 作品を選択（任意）--</option>'+items.map(i=>`<option value="${i.id}" ${i.id===currentSalesItemId?'selected':''}>${i.name}</option>`).join('');
   document.getElementById('sales-name').value=s?.name||'';
   document.getElementById('sales-date').value=s?.date||new Date().toISOString().split('T')[0];
+  updateSalesDateDisplay(document.getElementById('sales-date').value);
   document.getElementById('sales-price').value=s?.price||'';
   document.getElementById('sales-qty').value=s?.qty||1;
   document.getElementById('sales-fee-rate').value=s?.feeRate||10;
@@ -1218,6 +1222,13 @@ function selectSalesPlatform(btn,platform,fee){
   document.getElementById('sales-fee-rate').value=fee;calcSalesPreview();
 }
 
+function updateSalesDateDisplay(val){
+  if(!val){document.getElementById('sales-date-display').textContent='';return;}
+  const d=new Date(val+'T00:00:00');
+  const dns=['日','月','火','水','木','金','土'];
+  const str=d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日（'+dns[d.getDay()]+'）';
+  document.getElementById('sales-date-display').textContent=str;
+}
 function calcSalesPreview(){
   const price=parseFloat(document.getElementById('sales-price')?.value)||0;
   const qty=parseInt(document.getElementById('sales-qty')?.value)||1;
