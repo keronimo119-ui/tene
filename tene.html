@@ -441,8 +441,16 @@
     <div class="form-section">
       <p class="form-section-title">販売情報</p>
       <div class="input-group"><label class="input-label">販売日</label>
-        <input type="date" id="sales-date" oninput="updateSalesDateDisplay(this.value)" />
-        <div id="sales-date-display" style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);margin-top:0.3rem;"></div>
+        <input type="date" id="sales-date" style="display:none;" oninput="updateSalesDateDisplay(this.value)" />
+        <div style="display:flex;gap:0.5rem;align-items:center;">
+          <select id="sales-date-y" onchange="syncSalesDate()" style="flex:1;padding:0.65rem 0.5rem;border:2px solid var(--border);border-radius:10px;font-family:inherit;font-size:0.95rem;font-weight:700;background:var(--bg);color:var(--text-primary);"></select>
+          <span style="font-weight:900;color:var(--text-secondary);">年</span>
+          <select id="sales-date-m" onchange="syncSalesDate()" style="flex:1;padding:0.65rem 0.5rem;border:2px solid var(--border);border-radius:10px;font-family:inherit;font-size:0.95rem;font-weight:700;background:var(--bg);color:var(--text-primary);"></select>
+          <span style="font-weight:900;color:var(--text-secondary);">月</span>
+          <select id="sales-date-d" onchange="syncSalesDate()" style="flex:1;padding:0.65rem 0.5rem;border:2px solid var(--border);border-radius:10px;font-family:inherit;font-size:0.95rem;font-weight:700;background:var(--bg);color:var(--text-primary);"></select>
+          <span style="font-weight:900;color:var(--text-secondary);">日</span>
+        </div>
+        <div id="sales-date-display" style="font-size:0.9rem;font-weight:900;color:var(--accent-dark);margin-top:0.4rem;"></div>
       </div>
       <div class="input-group">
         <label class="input-label">販売プラットフォーム</label>
@@ -1196,8 +1204,7 @@ function showSalesForm(id){
   const sel=document.getElementById('sales-item-select');
   if(sel)sel.innerHTML='<option value="">-- 作品を選択（任意）--</option>'+items.map(i=>`<option value="${i.id}" ${i.id===currentSalesItemId?'selected':''}>${i.name}</option>`).join('');
   document.getElementById('sales-name').value=s?.name||'';
-  document.getElementById('sales-date').value=s?.date||new Date().toISOString().split('T')[0];
-  updateSalesDateDisplay(document.getElementById('sales-date').value);
+  initSalesDateSelectors(s?.date||new Date().toISOString().split('T')[0]);
   document.getElementById('sales-price').value=s?.price||'';
   document.getElementById('sales-qty').value=s?.qty||1;
   document.getElementById('sales-fee-rate').value=s?.feeRate||10;
@@ -1220,6 +1227,42 @@ function selectSalesPlatform(btn,platform,fee){
   document.querySelectorAll('#sales-platform-group .check-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');currentSalesPlatform=platform;currentSalesFeeRate=fee;
   document.getElementById('sales-fee-rate').value=fee;calcSalesPreview();
+}
+
+function initSalesDateSelectors(dateStr){
+  const now=dateStr?new Date(dateStr+'T00:00:00'):new Date();
+  const cy=now.getFullYear(),cm=now.getMonth()+1,cd=now.getDate();
+  const ysel=document.getElementById('sales-date-y');
+  const msel=document.getElementById('sales-date-m');
+  const dsel=document.getElementById('sales-date-d');
+  if(!ysel)return;
+  // 年（前後3年）
+  ysel.innerHTML='';
+  for(let y=cy-3;y<=cy+3;y++) ysel.innerHTML+=`<option value="${y}" ${y===cy?'selected':''}>${y}</option>`;
+  // 月
+  msel.innerHTML='';
+  for(let m=1;m<=12;m++) msel.innerHTML+=`<option value="${m}" ${m===cm?'selected':''}>${m}</option>`;
+  // 日
+  updateSalesDateDays(cy,cm,cd);
+  syncSalesDate();
+}
+
+function updateSalesDateDays(y,m,selectedD){
+  const dsel=document.getElementById('sales-date-d');
+  const dim=new Date(y,m,0).getDate();
+  dsel.innerHTML='';
+  for(let d=1;d<=dim;d++) dsel.innerHTML+=`<option value="${d}" ${d===selectedD?'selected':''}>${d}</option>`;
+}
+
+function syncSalesDate(){
+  const y=parseInt(document.getElementById('sales-date-y').value);
+  const m=parseInt(document.getElementById('sales-date-m').value);
+  const d=parseInt(document.getElementById('sales-date-d').value);
+  updateSalesDateDays(y,m,d);
+  const pad=n=>String(n).padStart(2,'0');
+  const val=y+'-'+pad(m)+'-'+pad(d);
+  document.getElementById('sales-date').value=val;
+  updateSalesDateDisplay(val);
 }
 
 function updateSalesDateDisplay(val){
