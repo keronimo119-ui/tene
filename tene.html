@@ -915,17 +915,39 @@ function calc(){
 function transferToItem(){
   const priceText=document.getElementById('price').textContent.replace('¥','').replace(/,/g,'');
   const price=parseInt(priceText)||0;
-  if(currentItemId&&items.find(i=>i.id===currentItemId)){
-    const item=items.find(i=>i.id===currentItemId);
-    const choice=confirm('「'+item.name+'」の価格を ¥'+price.toLocaleString()+' に更新しますか？\n\nOK → この作品の価格を更新\nキャンセル → 新規作品として登録');
-    if(choice){
-      item.price=price;
-      saveItem_db(item);renderItems();showItemDetail(currentItemId);return;
-    }
-  }
-  const mode=items.length>0?confirm('新規作品として登録しますか？\n\nOK → 新規作品として登録\nキャンセル → 既存作品に適用'):true;
-  if(mode){currentItemId=null;showItemForm(null);setTimeout(()=>{document.getElementById('form-price').value=price;},50);}
-  else showPriceApplyModal(price);
+  showPriceTransferModal(price);
+}
+
+function showPriceTransferModal(price){
+  const item=currentItemId?items.find(i=>i.id===currentItemId):null;
+  const box=document.querySelector('.confirm-box');
+  box.innerHTML=`
+    <p style="font-size:1rem;font-weight:900;margin-bottom:1rem;">💴 ¥${price.toLocaleString()} をどうしますか？</p>
+    <div style="display:flex;flex-direction:column;gap:0.6rem;">
+      ${item?`<button onclick="applyPriceToCurrentItem(${price})" style="padding:0.8rem;background:var(--accent);color:#000;border:none;border-radius:8px;font-family:inherit;font-size:0.95rem;font-weight:900;cursor:pointer;">✏️「${item.name}」の価格を更新</button>`:''}
+      <button onclick="goToNewItemWithPrice(${price})" style="padding:0.8rem;background:var(--accent-light);border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;font-weight:900;color:var(--accent-dark);cursor:pointer;">＋ 新規作品として登録</button>
+      ${items.length>0?`<button onclick="showPriceApplyModal(${price})" style="padding:0.8rem;background:var(--accent-light);border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;font-weight:900;color:var(--accent-dark);cursor:pointer;">📋 既存作品から選んで適用</button>`:''}
+      <button onclick="closeConfirm()" style="padding:0.7rem;background:transparent;border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.9rem;font-weight:900;color:var(--text-secondary);cursor:pointer;">キャンセル</button>
+    </div>
+  `;
+  document.getElementById('confirm-overlay').classList.add('visible');
+}
+
+async function applyPriceToCurrentItem(price){
+  const item=items.find(i=>i.id===currentItemId);
+  if(!item)return;
+  item.price=price;
+  await saveItem_db(item);
+  const idx=items.findIndex(i=>i.id===item.id);
+  items[idx]=item;
+  closeConfirm();renderItems();showItemDetail(currentItemId);
+}
+
+function goToNewItemWithPrice(price){
+  closeConfirm();
+  currentItemId=null;
+  showItemForm(null);
+  setTimeout(()=>{document.getElementById('form-price').value=price;},50);
 }
 
 function showPriceApplyModal(price){
