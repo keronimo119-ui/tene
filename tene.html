@@ -1116,7 +1116,17 @@ function addSalesFromItem(){
   if(item)setTimeout(()=>{
     document.getElementById('sales-name').value=item.name;
     document.getElementById('sales-price').value=item.price||'';
-    currentSalesItemId=currentItemId;calcSalesPreview();
+    currentSalesItemId=currentItemId;
+    // 出品先から手数料を自動セット
+    const pfees={'minne':10,'Creema':11,'メルカリ':10,'ラクマ':6,'ヤフオク':10,'BOOTH':5.6,'BASE':3.5,'iichi':8,'イベント':0,'その他':0};
+    const firstPlt=(item.platforms||[]).find(p=>pfees[p]!==undefined);
+    if(firstPlt){
+      selectSalesPlatform(
+        [...document.querySelectorAll('#sales-platform-group .check-btn')].find(b=>b.textContent===firstPlt),
+        firstPlt, pfees[firstPlt]
+      );
+    }
+    calcSalesPreview();
   },50);
 }
 function goToSnsFromItem(){
