@@ -680,6 +680,10 @@
   </div>
 </div>
 
+<div class="confirm-overlay" id="price-transfer-overlay">
+  <div class="confirm-box" id="price-transfer-box"></div>
+</div>
+
 <div class="confirm-overlay" id="confirm-overlay">
   <div class="confirm-box">
     <p id="confirm-msg">削除しますか？</p>
@@ -920,17 +924,40 @@ function transferToItem(){
 
 function showPriceTransferModal(price){
   const item=currentItemId?items.find(i=>i.id===currentItemId):null;
-  const box=document.querySelector('.confirm-box');
+  const box=document.getElementById('price-transfer-box');
   box.innerHTML=`
     <p style="font-size:1rem;font-weight:900;margin-bottom:1rem;">💴 ¥${price.toLocaleString()} をどうしますか？</p>
     <div style="display:flex;flex-direction:column;gap:0.6rem;">
       ${item?`<button onclick="applyPriceToCurrentItem(${price})" style="padding:0.8rem;background:var(--accent);color:#000;border:none;border-radius:8px;font-family:inherit;font-size:0.95rem;font-weight:900;cursor:pointer;">✏️「${item.name}」の価格を更新</button>`:''}
       <button onclick="goToNewItemWithPrice(${price})" style="padding:0.8rem;background:var(--accent-light);border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;font-weight:900;color:var(--accent-dark);cursor:pointer;">＋ 新規作品として登録</button>
-      ${items.length>0?`<button onclick="showPriceApplyModal(${price})" style="padding:0.8rem;background:var(--accent-light);border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;font-weight:900;color:var(--accent-dark);cursor:pointer;">📋 既存作品から選んで適用</button>`:''}
-      <button onclick="closeConfirm()" style="padding:0.7rem;background:transparent;border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.9rem;font-weight:900;color:var(--text-secondary);cursor:pointer;">キャンセル</button>
+      ${items.length>0?`<button onclick="showPriceApplyModal2(${price})" style="padding:0.8rem;background:var(--accent-light);border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;font-weight:900;color:var(--accent-dark);cursor:pointer;">📋 既存作品から選んで適用</button>`:''}
+      <button onclick="closePriceTransfer()" style="padding:0.7rem;background:transparent;border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.9rem;font-weight:900;color:var(--text-secondary);cursor:pointer;">キャンセル</button>
     </div>
   `;
-  document.getElementById('confirm-overlay').classList.add('visible');
+  document.getElementById('price-transfer-overlay').classList.add('visible');
+}
+
+function closePriceTransfer(){
+  document.getElementById('price-transfer-overlay').classList.remove('visible');
+}
+
+function showPriceApplyModal2(price){
+  closePriceTransfer();
+  const box=document.getElementById('price-transfer-box');
+  box.innerHTML=`
+    <p style="font-size:1rem;font-weight:900;margin-bottom:0.75rem;">どの作品に適用？<br><span style="color:var(--accent);">¥${price.toLocaleString()}</span></p>
+    <div style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:0.4rem;margin-bottom:1rem;">
+      ${items.map(i=>`<button onclick="applyPriceToItem2('${i.id}',${price})" style="padding:0.65rem 1rem;background:var(--accent-light);border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;font-weight:900;color:var(--accent-dark);cursor:pointer;text-align:left;">${i.name}<span style="float:right;font-size:0.8rem;color:var(--text-secondary);">¥${(i.price||0).toLocaleString()}</span></button>`).join('')}
+    </div>
+    <button onclick="closePriceTransfer()" style="padding:0.7rem;width:100%;background:transparent;border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.9rem;font-weight:900;color:var(--text-secondary);cursor:pointer;">キャンセル</button>
+  `;
+  document.getElementById('price-transfer-overlay').classList.add('visible');
+}
+
+async function applyPriceToItem2(id,price){
+  const item=items.find(i=>i.id===id);
+  if(item){item.price=price;await saveItem_db(item);const idx=items.findIndex(i=>i.id===id);items[idx]=item;renderItems();}
+  closePriceTransfer();showItemDetail(id);
 }
 
 async function applyPriceToCurrentItem(price){
@@ -940,11 +967,11 @@ async function applyPriceToCurrentItem(price){
   await saveItem_db(item);
   const idx=items.findIndex(i=>i.id===item.id);
   items[idx]=item;
-  closeConfirm();renderItems();showItemDetail(currentItemId);
+  closePriceTransfer();renderItems();showItemDetail(currentItemId);
 }
 
 function goToNewItemWithPrice(price){
-  closeConfirm();
+  closePriceTransfer();
   currentItemId=null;
   showItemForm(null);
   setTimeout(()=>{document.getElementById('form-price').value=price;},50);
