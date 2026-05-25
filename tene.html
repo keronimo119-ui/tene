@@ -225,6 +225,7 @@
     <div class="card">
       <p class="card-title">データ管理</p>
       <div style="display:flex;flex-direction:column;gap:0.5rem;">
+        <button class="btn btn-primary" onclick="refreshHome()" style="background:var(--green);color:#fff;">🔄 ホームを更新</button>
         <button class="btn btn-secondary" onclick="exportBackup()">⬇️ バックアップ（JSONエクスポート）</button>
         <label class="btn btn-secondary" style="cursor:pointer;display:block;text-align:center;">
           ⬆️ バックアップから復元
@@ -680,6 +681,10 @@
   </div>
 </div>
 
+<div class="confirm-overlay" id="storage-overlay">
+  <div class="confirm-box" id="storage-box"></div>
+</div>
+
 <div class="confirm-overlay" id="price-transfer-overlay">
   <div class="confirm-box" id="price-transfer-box"></div>
 </div>
@@ -935,6 +940,16 @@ function showPriceTransferModal(price){
     </div>
   `;
   document.getElementById('price-transfer-overlay').classList.add('visible');
+}
+
+async function refreshHome(){
+  showLoading('データを更新中...');
+  await loadAllData();
+  renderCalendar();
+  hideLoading();
+  // カレンダーの詳細を閉じる
+  const cd=document.getElementById('cal-detail');
+  if(cd)cd.style.display='none';
 }
 
 function closePriceTransfer(){
@@ -1870,23 +1885,41 @@ async function importBackup(input){
 
 // ===== ストレージ管理 =====
 async function showStorageManager(){
-  let est=0;
-  try{const q=await navigator.storage.estimate();est=q.usage||0;}catch(e){}
-  const box=document.querySelector('.confirm-box');
+  let est=0,quota=0;
+  try{const q=await navigator.storage.estimate();est=q.usage||0;quota=q.quota||0;}catch(e){}
   const kb=Math.round(est/1024);
-  box.innerHTML=`<p style="font-size:1rem;font-weight:900;margin-bottom:0.75rem;">📊 ストレージ管理</p>
-    <div style="background:var(--bg);border-radius:8px;padding:0.6rem;margin-bottom:0.75rem;">
-      <div style="display:flex;justify-content:space-between;margin-bottom:0.3rem;">
-        <span style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);">IndexedDB使用量</span>
-        <span style="font-size:0.85rem;font-weight:900;">約${kb}KB</span>
+  const mb=Math.round(est/1024/1024*10)/10;
+  const qmb=quota?Math.round(quota/1024/1024)+'MB':' 不明';
+  const pct=quota?Math.min(100,Math.round(est/quota*100)):0;
+  const box=document.getElementById('storage-box');
+  box.innerHTML=`
+    <p style="font-size:1rem;font-weight:900;margin-bottom:0.75rem;">📊 ストレージ管理</p>
+    <div style="background:var(--bg);border-radius:8px;padding:0.75rem;margin-bottom:0.75rem;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:0.4rem;">
+        <span style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);">使用量</span>
+        <span style="font-size:0.85rem;font-weight:900;">${mb}MB / ${qmb}（${pct}%）</span>
       </div>
-      <div style="font-size:0.8rem;color:var(--text-secondary);">作品数: ${items.length} / ログ数: ${logs.length} / 売上数: ${sales.length}</div>
+      <div style="height:8px;background:var(--border);border-radius:99px;overflow:hidden;margin-bottom:0.6rem;">
+        <div style="height:100%;width:${pct}%;background:${pct>=80?'var(--red)':'var(--accent)'};border-radius:99px;"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.3rem;font-size:0.82rem;">
+        <div style="color:var(--text-secondary);">作品数</div><div style="font-weight:900;">${items.length}件</div>
+        <div style="color:var(--text-secondary);">制作ログ数</div><div style="font-weight:900;">${logs.length}件</div>
+        <div style="color:var(--text-secondary);">売上記録数</div><div style="font-weight:900;">${sales.length}件</div>
+        <div style="color:var(--text-secondary);">資材数</div><div style="font-weight:900;">${stockMaterials.length}件</div>
+      </div>
     </div>
+    <p style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);margin-bottom:0.75rem;">データはIndexedDB（端末内）に保存されています。定期的にバックアップをエクスポートしてください。</p>
     <div style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:0.75rem;">
-      <button onclick="exportBackup();closeConfirm()" style="padding:0.75rem;background:var(--accent);color:#000;border:none;border-radius:8px;font-family:inherit;font-size:0.95rem;font-weight:900;cursor:pointer;">⬇️ バックアップをエクスポート</button>
+      <button onclick="exportBackup();closeStorageOverlay()" style="padding:0.75rem;background:var(--accent);color:#000;border:none;border-radius:8px;font-family:inherit;font-size:0.95rem;font-weight:900;cursor:pointer;">⬇️ バックアップをエクスポート</button>
     </div>
-    <button class="btn btn-secondary" style="width:100%;" onclick="closeConfirm()">閉じる</button>`;
-  document.getElementById('confirm-overlay').classList.add('visible');
+    <button style="padding:0.7rem;width:100%;background:transparent;border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.9rem;font-weight:900;color:var(--text-secondary);cursor:pointer;" onclick="closeStorageOverlay()">閉じる</button>
+  `;
+  document.getElementById('storage-overlay').classList.add('visible');
+}
+
+function closeStorageOverlay(){
+  document.getElementById('storage-overlay').classList.remove('visible');
 }
 
 // ===== 初期化 =====
