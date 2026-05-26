@@ -1,12 +1,13 @@
 {
   "name": "Tene（手値）",
   "short_name": "Tene",
-  "description": "作ることに集中できる、作家のための相棒アプリ",
-  "start_url": "/tene/tene.html",
+  "description": "ハンドメイド作家のための物販管理アプリ",
+  "start_url": "./tene.html",
   "display": "standalone",
   "background_color": "#f5ede0",
   "theme_color": "#b36200",
-  "orientation": "portrait",
+  "lang": "ja",
+  "orientation": "portrait-primary",
   "icons": [
     {
       "src": "icon-192.png",
