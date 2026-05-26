@@ -226,13 +226,13 @@
       <p class="card-title">データ管理</p>
       <div style="display:flex;flex-direction:column;gap:0.5rem;">
         <button class="btn btn-primary" onclick="refreshHome()" style="background:var(--green);color:#fff;">🔄 ホームを更新</button>
-        <button class="btn btn-secondary" onclick="exportBackup()">⬇️ バックアップ（JSONエクスポート）</button>
+        <button class="btn btn-secondary" onclick="exportBackup()">⬇️ バックアップを保存</button>
         <label class="btn btn-secondary" style="cursor:pointer;display:block;text-align:center;">
           ⬆️ バックアップから復元
           <input type="file" accept=".json" style="display:none;" onchange="importBackup(this)" />
         </label>
-        <button class="btn btn-secondary" onclick="showStorageManager()">📊 ストレージ管理</button>
       </div>
+      <p style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);margin-top:0.75rem;line-height:1.6;">データはこの端末に保存されています。機種変更の際は「バックアップを保存」でデータを書き出し、新しい端末で「バックアップから復元」してください。</p>
     </div>
   </div>
 </div>
@@ -628,7 +628,18 @@
     <div class="form-section">
       <p class="form-section-title">基本情報</p>
       <div class="input-group"><label class="input-label">作品名</label><input type="text" id="log-name" placeholder="例：桜のピアス" /></div>
-      <div class="input-group"><label class="input-label">制作日</label><input type="date" id="log-date" /></div>
+      <div class="input-group"><label class="input-label">制作日</label>
+        <input type="date" id="log-date" style="display:none;" />
+        <div style="display:flex;gap:0.5rem;align-items:center;">
+          <select id="log-date-y" onchange="syncLogDate()" style="flex:1;padding:0.65rem 0.5rem;border:2px solid var(--border);border-radius:10px;font-family:inherit;font-size:0.95rem;font-weight:700;background:var(--bg);color:var(--text-primary);"></select>
+          <span style="font-weight:900;color:var(--text-secondary);">年</span>
+          <select id="log-date-m" onchange="syncLogDate()" style="flex:1;padding:0.65rem 0.5rem;border:2px solid var(--border);border-radius:10px;font-family:inherit;font-size:0.95rem;font-weight:700;background:var(--bg);color:var(--text-primary);"></select>
+          <span style="font-weight:900;color:var(--text-secondary);">月</span>
+          <select id="log-date-d" onchange="syncLogDate()" style="flex:1;padding:0.65rem 0.5rem;border:2px solid var(--border);border-radius:10px;font-family:inherit;font-size:0.95rem;font-weight:700;background:var(--bg);color:var(--text-primary);"></select>
+          <span style="font-weight:900;color:var(--text-secondary);">日</span>
+        </div>
+        <div id="log-date-display" style="font-size:0.9rem;font-weight:900;color:var(--accent-dark);margin-top:0.4rem;"></div>
+      </div>
     </div>
     <div class="form-section">
       <p class="form-section-title">使用素材・材料費</p>
@@ -1204,7 +1215,16 @@ async function saveSnsToItem(){
   if(!item){alert('作品を選択してから保存してください');return;}
   if(!item.snsImages)item.snsImages=[];
   item.snsImages.push(canvas.toDataURL('image/jpeg',0.85));
-  await saveItem_db(item);alert('作品管理に保存しました！');
+  const idx=items.findIndex(i=>i.id===currentItemId);
+  items[idx]=item;
+  await saveItem_db(item);
+  alert('作品管理に保存しました！');
+  // 発信タブのSNS画像欄を即更新
+  const snsEl=document.getElementById('detail-sns-images');
+  if(snsEl){
+    const snsImages=item.snsImages||[];
+    snsEl.innerHTML=snsImages.length?`<div class="photo-preview">${snsImages.map((src,i)=>`<div class="photo-thumb"><img src="${src}" /><button class="del-btn" onclick="deleteItemSns('${item.id}',${i})">✕</button></div>`).join('')}</div>`:'<div style="color:var(--text-secondary);font-size:0.85rem;padding:0.5rem 0;">まだSNS画像がありません</div>';
+  }
 }
 
 function showConfirm(type,id){
@@ -1657,12 +1677,46 @@ function showLogForm(id){
   logPhotos=JSON.parse(JSON.stringify(l?.photos||[]));
   logLinkedItemId=l?.itemId||currentItemId||null;
   document.getElementById('log-name').value=l?.name||'';
-  document.getElementById('log-date').value=l?.date||new Date().toISOString().split('T')[0];
+  initLogDateSelectors(l?.date||new Date().toISOString().split('T')[0]);
   document.getElementById('log-memo').value=l?.memo||'';
   document.getElementById('log-photos').value='';
   document.getElementById('log-delete-btn-wrap').innerHTML=id?`<button class="btn btn-danger" style="width:100%" onclick="showConfirm('log','${id}')">🗑️ このログを削除</button>`:'';
   renderLogMaterials();renderLogPhotos();updateLogStatus();
   showPage('page-log-form');
+}
+function initLogDateSelectors(dateStr){
+  const now=dateStr?new Date(dateStr+'T00:00:00'):new Date();
+  const cy=now.getFullYear(),cm=now.getMonth()+1,cd=now.getDate();
+  const ysel=document.getElementById('log-date-y');
+  const msel=document.getElementById('log-date-m');
+  if(!ysel)return;
+  ysel.innerHTML='';
+  for(let y=cy-5;y<=cy+2;y++) ysel.innerHTML+=`<option value="${y}" ${y===cy?'selected':''}>${y}</option>`;
+  msel.innerHTML='';
+  for(let m=1;m<=12;m++) msel.innerHTML+=`<option value="${m}" ${m===cm?'selected':''}>${m}</option>`;
+  updateLogDateDays(cy,cm,cd);
+  syncLogDate();
+}
+
+function updateLogDateDays(y,m,selectedD){
+  const dsel=document.getElementById('log-date-d');
+  if(!dsel)return;
+  const dim=new Date(y,m,0).getDate();
+  dsel.innerHTML='';
+  for(let d=1;d<=dim;d++) dsel.innerHTML+=`<option value="${d}" ${d===selectedD?'selected':''}>${d}</option>`;
+}
+
+function syncLogDate(){
+  const y=parseInt(document.getElementById('log-date-y').value);
+  const m=parseInt(document.getElementById('log-date-m').value);
+  const d=parseInt(document.getElementById('log-date-d').value);
+  updateLogDateDays(y,m,d);
+  const pad=n=>String(n).padStart(2,'0');
+  const val=y+'-'+pad(m)+'-'+pad(d);
+  document.getElementById('log-date').value=val;
+  const dns=['日','月','火','水','木','金','土'];
+  const dt=new Date(val+'T00:00:00');
+  document.getElementById('log-date-display').textContent=y+'年'+m+'月'+d+'日（'+dns[dt.getDay()]+'）';
 }
 function setLogStatus(s){logStatus=s;updateLogStatus();}
 function updateLogStatus(){
