@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>フィーチャーグラフィック生成</title></head>
+<body>
+<p>ボタンを押すと自動ダウンロードされます。</p>
+<button onclick="generate()">feature-graphic.png をダウンロード</button>
+<canvas id="c" style="display:none"></canvas>
+<script>
+function generate() {
+  const w = 1024, h = 500;
+  const canvas = document.getElementById('c');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+
+  // 背景グラデーション
+  const grad = ctx.createLinearGradient(0, 0, w, h);
+  grad.addColorStop(0, '#b36200');
+  grad.addColorStop(1, '#7a4400');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, h);
+
+  // アイコン風丸角四角
+  ctx.fillStyle = 'rgba(255,255,255,0.12)';
+  ctx.beginPath();
+  ctx.roundRect(60, 80, 220, 220, 36);
+  ctx.fill();
+
+  // アイコン内「手値」
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '900 80px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('手値', 170, 175);
+
+  ctx.font = '700 32px sans-serif';
+  ctx.fillStyle = '#ffe4b8';
+  ctx.fillText('Tene', 170, 255);
+
+  // メインテキスト
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'left';
+  ctx.font = '900 72px sans-serif';
+  ctx.fillText('手値 - Tene', 330, 160);
+
+  ctx.font = '400 32px sans-serif';
+  ctx.fillStyle = '#ffe4b8';
+  ctx.fillText('ハンドメイド作家のための', 330, 240);
+  ctx.fillText('売上・作品管理アプリ', 330, 290);
+
+  // タグライン
+  ctx.font = '300 24px sans-serif';
+  ctx.fillStyle = 'rgba(255,228,184,0.7)';
+  ctx.fillText('原価計算 · 売上記録 · 制作ログ', 330, 360);
+
+  const a = document.createElement('a');
+  a.download = 'feature-graphic.png';
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+}
+</script>
+</body>
+</html>
