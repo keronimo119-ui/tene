@@ -463,6 +463,7 @@
           <button class="check-btn" onclick="selectSalesPlatform(this,'ヤフオク',10)">ヤフオク</button>
           <button class="check-btn" onclick="selectSalesPlatform(this,'BOOTH',5.6)">BOOTH</button>
           <button class="check-btn" onclick="selectSalesPlatform(this,'BASE',3.5)">BASE</button>
+          <button class="check-btn" onclick="selectSalesPlatform(this,'iichi',8)">iichi</button>
           <button class="check-btn" onclick="selectSalesPlatform(this,'イベント',0)">イベント</button>
           <button class="check-btn" onclick="selectSalesPlatform(this,'その他',0)">その他</button>
         </div>
@@ -854,7 +855,7 @@ function updateHeader(pageId){
   const item=items.find(i=>i.id===currentItemId);
   const titles={
     'page-home':'手値','page-price':'価格計算','page-items':'作品管理',
-    'page-item-detail':item?.name||'作品詳細','page-item-form':'作品を編集',
+    'page-item-detail':item?.name||'作品詳細','page-item-form':isAddingItem?'作品を追加':'作品を編集',
     'page-sales':'売上管理','page-sales-form':'売上を記録',
     'page-materials':'資材管理','page-material-form':'資材を編集',
     'page-log':'制作ログ','page-log-form':'制作ログ編集',
@@ -1024,7 +1025,7 @@ function goToPriceFromItem(){
   showPage('page-price');
   if(item){
     setTimeout(()=>{
-      const pfees={'minne':10,'Creema':11,'メルカリ':10,'ラクマ':6,'ヤフオク':10,'BOOTH':5.6,'BASE':3.5,'iichi':8};
+      const pfees={'minne':10,'Creema':11,'メルカリ':10,'ラクマ':6,'ヤフオク':10,'BOOTH':5.6,'BASE':3.5,'iichi':8,'イベント販売':0,'イベント':0,'フリマアプリ':10,'ネットショップ':0,'非公開':0};
       const fp=(item.platforms||[]).find(p=>pfees[p]);
       if(fp){feeRate=pfees[fp]/100;document.getElementById('fee-input').value=pfees[fp];calc();}
     },100);
@@ -1035,6 +1036,7 @@ buildStars('stars-rare','rare');buildStars('stars-skill','skill');buildStars('st
 
 // ===== 作品管理 =====
 let deleteTarget={type:null,id:null};
+let isAddingItem=false;
 
 function renderItems(){
   const search=(document.getElementById('search-input')?.value||'').toLowerCase();
@@ -1106,6 +1108,7 @@ function showItemDetail(id){
 }
 
 function showItemForm(id){
+  isAddingItem=!id;
   currentItemId=id||currentItemId;
   const item=id?items.find(i=>i.id===id):null;
   document.getElementById('form-name').value=item?.name||'';
@@ -1193,7 +1196,7 @@ function addSalesFromItem(){
     document.getElementById('sales-price').value=item.price||'';
     currentSalesItemId=currentItemId;
     // 出品先から手数料を自動セット
-    const pfees={'minne':10,'Creema':11,'メルカリ':10,'ラクマ':6,'ヤフオク':10,'BOOTH':5.6,'BASE':3.5,'iichi':8,'イベント':0,'その他':0};
+    const pfees={'minne':10,'Creema':11,'メルカリ':10,'ラクマ':6,'ヤフオク':10,'BOOTH':5.6,'BASE':3.5,'iichi':8,'イベント':0,'イベント販売':0,'フリマアプリ':10,'ネットショップ':0,'非公開':0,'その他':0};
     const firstPlt=(item.platforms||[]).find(p=>pfees[p]!==undefined);
     if(firstPlt){
       selectSalesPlatform(
@@ -1279,8 +1282,8 @@ function renderSales(){
   document.getElementById('summary-fee').textContent='¥'+fee.toLocaleString();
   document.getElementById('summary-income').textContent='¥'+(gross-fee).toLocaleString();
   const list=document.getElementById('sales-list');if(!list)return;
-  const sorted=[...sales].sort((a,b)=>new Date(b.date)-new Date(a.date));
-  if(!sorted.length){list.innerHTML='<div class="empty-state">売上記録がまだありません。</div>';return;}
+  const sorted=[...sales].filter(s=>{const d=new Date(s.date);return d.getFullYear()===salesYear&&d.getMonth()+1===salesMonth;}).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  if(!sorted.length){list.innerHTML=`<div class="empty-state">${salesYear}年${salesMonth}月の売上記録はありません。</div>`;return;}
   list.innerHTML=sorted.map(s=>{
     const g=s.price*s.qty,f=Math.round(g*(s.feeRate||0)/100),n=g-f;
     return `<div class="item-card" onclick="showSalesForm('${s.id}')">
@@ -1319,7 +1322,7 @@ function fillSalesFromItem(sel){
 
 function selectSalesPlatform(btn,platform,fee){
   document.querySelectorAll('#sales-platform-group .check-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');currentSalesPlatform=platform;currentSalesFeeRate=fee;
+  if(btn)btn.classList.add('active');currentSalesPlatform=platform;currentSalesFeeRate=fee;
   document.getElementById('sales-fee-rate').value=fee;calcSalesPreview();
 }
 
@@ -1979,11 +1982,16 @@ function closeStorageOverlay(){
 // ===== 初期化 =====
 async function init(){
   showLoading('データを読み込み中...');
-  await requestPersist();
-  await openDB();
-  await loadAllData();
-  renderItems();renderLogs();renderSales();renderStockMaterials();renderCalendar();
-  hideLoading();
+  try {
+    await requestPersist();
+    await openDB();
+    await loadAllData();
+    renderItems();renderLogs();renderSales();renderStockMaterials();renderCalendar();
+  } catch(e) {
+    console.error('初期化エラー:', e);
+  } finally {
+    hideLoading();
+  }
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('sw.js').catch(()=>{});
   }
